@@ -64,3 +64,73 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+@import './library-seat-management.css';
+
+/* =========================================
+   PREMIUM FULL DAY SEAT
+========================================= */
+
+.seat-card.full-day-seat {
+    position: relative;
+    background: linear-gradient(
+        145deg,
+        rgba(239, 68, 68, 0.28),
+        rgba(127, 29, 29, 0.45)
+    ) !important;
+
+    border: 2px solid #ef4444 !important;
+
+    box-shadow:
+        0 0 0 1px rgba(239, 68, 68, 0.25),
+        0 0 18px rgba(239, 68, 68, 0.22),
+        inset 0 0 14px rgba(239, 68, 68, 0.12);
+
+    transform: translateY(-1px);
+}
+
+.seat-card.full-day-seat .seat-status-dot {
+    background: #ef4444 !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+}
+
+.seat-card.full-day-seat .mt-2 {
+    margin-top: 6px;
+}
+
+.seat-card.full-day-seat .mt-2 span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 22px;
+
+    border-radius: 6px;
+
+    background: #ef4444 !important;
+    color: #fff !important;
+
+    font-size: 12px !important;
+    font-weight: 800 !important;
+
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.35);
+}
+
+.seat-card.full-day-seat .seat-number {
+    color: #fff !important;
+    font-weight: 800;
+}
+
+.seat-card.full-day-seat:hover {
+    background: linear-gradient(
+        145deg,
+        rgba(239, 68, 68, 0.38),
+        rgba(127, 29, 29, 0.58)
+    ) !important;
+
+    border-color: #f87171 !important;
+
+    box-shadow:
+        0 0 0 1px rgba(239, 68, 68, 0.35),
+        0 0 25px rgba(239, 68, 68, 0.35);
+}

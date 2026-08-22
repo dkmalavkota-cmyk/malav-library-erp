@@ -1,17 +1,15 @@
-@props([
-    'sidebar' => false,
-])
+<div class="flex items-center gap-3">
+    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-500 text-black font-black text-xl shadow-lg">
+        M
+    </div>
 
-@if($sidebar)
-    <flux:sidebar.brand name="Laravel Starter Kit" {{ $attributes }}>
-        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md bg-accent-content text-accent-foreground">
-            <x-app-logo-icon class="size-5 fill-current text-white dark:text-black" />
-        </x-slot>
-    </flux:sidebar.brand>
-@else
-    <flux:brand name="Laravel Starter Kit" {{ $attributes }}>
-        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md bg-accent-content text-accent-foreground">
-            <x-app-logo-icon class="size-5 fill-current text-white dark:text-black" />
-        </x-slot>
-    </flux:brand>
-@endif
+    <div class="leading-tight">
+        <div class="text-sm font-bold text-white">
+            Malav Library
+        </div>
+
+        <div class="text-xs text-gray-400">
+            Library ERP
+        </div>
+    </div>
+</div>
