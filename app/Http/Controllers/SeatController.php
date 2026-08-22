@@ -19,7 +19,11 @@ class SeatController extends Controller
 
         // Search
         if ($request->filled('search')) {
-            $query->where('seat_number', 'like', '%' . $request->search . '%');
+            $query->where(
+                'seat_number',
+                'like',
+                '%' . $request->search . '%'
+            );
         }
 
         // Room Filter
@@ -51,106 +55,144 @@ class SeatController extends Controller
 
     /**
      * Generate Library Seats
+     *
+     * Seats are generated dynamically according to
+     * the active rooms and their configured capacity.
      */
     public function generate()
     {
-        $mainHall = Room::where('name', 'Main Hall')->first();
-        $womenRoom = Room::where('name', 'Women Study Room')->first();
+        /*
+         * Get all active rooms having seat capacity.
+         *
+         * Room names are intentionally NOT hard-coded.
+         */
+        $rooms = Room::where('status', 'Active')
+            ->where('total_seats', '>', 0)
+            ->orderBy('id')
+            ->get();
 
-        if (! $mainHall || ! $womenRoom) {
+        if ($rooms->isEmpty()) {
             return redirect()
                 ->route('seats.index')
-                ->with('success', 'Please create Main Hall and Women Study Room first.');
+                ->with(
+                    'success',
+                    'Please create at least one active room with seat capacity first.'
+                );
         }
 
-        if (Seat::count() > 0) {
+        /*
+         * Prevent accidental duplicate generation.
+         *
+         * Once seats exist, Generate Seats will not create
+         * another duplicate set.
+         */
+        if (Seat::exists()) {
             return redirect()
                 ->route('seats.index')
-                ->with('success', 'Seats have already been generated.');
+                ->with(
+                    'success',
+                    'Seats have already been generated.'
+                );
         }
 
         DB::beginTransaction();
 
         try {
 
-            // ============================
-            // Main Hall (1 - 60)
-            // ============================
+            $generatedSeats = 0;
 
-            $tableWiseSeats = [
-    'A' => range(1, 16),
-    'B' => range(17, 31),
-    'C' => range(32, 46),
-    'D' => range(47, 60),
-];
+            foreach ($rooms as $room) {
 
-           foreach ($tableWiseSeats as $tableCode => $seatNumbers) {
+                $totalSeats = (int) $room->total_seats;
 
-    foreach ($seatNumbers as $seatNumber) {
+                /*
+                 * Women/Ladies rooms use:
+                 * W01, W02, W03...
+                 *
+                 * Other rooms use:
+                 * 1, 2, 3...
+                 */
+                $isWomenRoom = str_contains(
+                    strtolower($room->name),
+                    'women'
+                );
 
-        Seat::create([
-            'room_id'     => $mainHall->id,
-            'table_no'    => $tableCode,
-            'seat_number' => (string) $seatNumber,
-            'status'      => 'available',
-            'created_by'  => Auth::id(),
-        ]);
+                for ($i = 1; $i <= $totalSeats; $i++) {
 
-    }
+                    $seatNumber = $isWomenRoom
+                        ? 'W' . str_pad(
+                            $i,
+                            2,
+                            '0',
+                            STR_PAD_LEFT
+                        )
+                        : (string) $i;
 
-}
+                    /*
+                     * Every 15 seats belong to one table.
+                     *
+                     * 1-15   = Table 1
+                     * 16-30  = Table 2
+                     * 31-45  = Table 3
+                     * 46-60  = Table 4
+                     */
+                    $tableNo = (int) ceil($i / 15);
 
-            // ============================
-            // Women Study Room (W01 - W15)
-            // ============================
+                    Seat::create([
+                        'room_id'     => $room->id,
+                        'table_no'    => $tableNo,
+                        'seat_number' => $seatNumber,
+                        'status'      => 'available',
+                        'created_by'  => Auth::id(),
+                    ]);
 
-            for ($i = 1; $i <= 15; $i++) {
-
-                Seat::create([
-                    'room_id'     => $womenRoom->id,
-                    'table_no'    => 1,
-                    'seat_number' => 'W' . str_pad($i, 2, '0', STR_PAD_LEFT),
-                    'status'      => 'available',
-                    'created_by'  => Auth::id(),
-                ]);
+                    $generatedSeats++;
+                }
             }
 
             DB::commit();
 
             return redirect()
                 ->route('seats.index')
-                ->with('success', '75 seats generated successfully.');
+                ->with(
+                    'success',
+                    $generatedSeats . ' seats generated successfully.'
+                );
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
             DB::rollBack();
 
             return redirect()
                 ->route('seats.index')
-                ->with('success', 'Error: ' . $e->getMessage());
+                ->with(
+                    'success',
+                    'Error generating seats: ' . $e->getMessage()
+                );
         }
     }
 
     /**
- * Seat Layout
- */
-public function layout()
-{
-    $rooms = Room::with([
-        'seats' => function ($query) {
+     * Seat Layout
+     */
+    public function layout()
+    {
+        $rooms = Room::with([
+            'seats' => function ($query) {
 
-            $query->orderBy('table_no')
-                ->orderByRaw("
-                    CASE
-                        WHEN seat_number LIKE 'W%' THEN 999
-                        ELSE CAST(seat_number AS UNSIGNED)
-                    END
-                ")
-                ->orderBy('seat_number');
+                $query
+                    ->orderBy('table_no')
+                    ->orderByRaw("
+                        CASE
+                            WHEN seat_number LIKE 'W%' THEN 999
+                            ELSE CAST(seat_number AS UNSIGNED)
+                        END
+                    ")
+                    ->orderBy('seat_number');
 
-        }
-    ])->get();
+            }
+        ])->get();
 
-    return view('seats.layout', compact('rooms'));
-}
+        return view('seats.layout', compact('rooms'));
+    }
 }
