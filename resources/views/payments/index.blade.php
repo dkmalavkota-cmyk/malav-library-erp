@@ -35,6 +35,16 @@
 
 
         {{-- Error Message --}}
+        @if(session('error'))
+
+            <div class="rounded-xl border border-red-700 bg-red-900/20 p-4 text-red-300">
+                {{ session('error') }}
+            </div>
+
+        @endif
+
+
+        {{-- Validation Errors --}}
         @if($errors->any())
 
             <div class="rounded-xl border border-red-700 bg-red-900/20 p-4 text-red-300">
@@ -67,7 +77,7 @@
                 </p>
 
                 <h2 class="mt-2 text-3xl font-bold text-green-400">
-                    ₹{{ number_format($todayCollection, 2) }}
+                    ₹{{ number_format($todayCollection ?? 0, 2) }}
                 </h2>
 
             </div>
@@ -81,7 +91,7 @@
                 </p>
 
                 <h2 class="mt-2 text-3xl font-bold text-blue-400">
-                    {{ $todayPayments }}
+                    {{ $todayPayments ?? 0 }}
                 </h2>
 
             </div>
@@ -95,7 +105,7 @@
                 </p>
 
                 <h2 class="mt-2 text-3xl font-bold text-yellow-400">
-                    ₹{{ number_format($totalCollection, 2) }}
+                    ₹{{ number_format($totalCollection ?? 0, 2) }}
                 </h2>
 
             </div>
@@ -183,8 +193,8 @@
                             </th>
 
                             <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-300">
-    Actions
-</th>
+                                Actions
+                            </th>
 
                         </tr>
 
@@ -218,26 +228,44 @@
                                 {{-- Student --}}
                                 <td class="px-6 py-4">
 
-                                    <div>
+                                    @if($payment->student)
 
-                                        <p class="font-semibold text-white">
+                                        <div>
 
-                                            {{ $payment->student->first_name }}
-                                            {{ $payment->student->last_name }}
+                                            <p class="font-semibold text-white">
 
-                                        </p>
+                                                {{ $payment->student->first_name }}
+                                                {{ $payment->student->last_name }}
 
-                                        <p class="text-xs text-zinc-500">
+                                            </p>
 
-                                            {{ $payment->student->student_code }}
+                                            <p class="text-xs text-zinc-500">
 
-                                            @if($payment->student->mobile)
-                                                • {{ $payment->student->mobile }}
-                                            @endif
+                                                {{ $payment->student->student_code }}
 
-                                        </p>
+                                                @if($payment->student->mobile)
+                                                    • {{ $payment->student->mobile }}
+                                                @endif
 
-                                    </div>
+                                            </p>
+
+                                        </div>
+
+                                    @else
+
+                                        <div>
+
+                                            <p class="font-semibold text-zinc-400">
+                                                Deleted Student
+                                            </p>
+
+                                            <p class="text-xs text-zinc-600">
+                                                Student record no longer exists
+                                            </p>
+
+                                        </div>
+
+                                    @endif
 
                                 </td>
 
@@ -245,26 +273,43 @@
                                 {{-- Plan --}}
                                 <td class="px-6 py-4">
 
-                                    <div>
+                                    @if($payment->membership && $payment->membership->plan)
 
-                                        <p class="font-medium text-white">
+                                        <div>
 
-                                            {{ $payment->membership->plan->name }}
+                                            <p class="font-medium text-white">
+                                                {{ $payment->membership->plan->name }}
+                                            </p>
 
-                                        </p>
+                                            <p class="text-xs text-zinc-500">
 
-                                        <p class="text-xs text-zinc-500">
+                                                {{ $payment->membership->plan->duration_months }}
 
-                                            {{ $payment->membership->plan->duration_months }}
-                                            {{ $payment->membership->plan->duration_months == 1 ? 'Month' : 'Months' }}
+                                                {{ $payment->membership->plan->duration_months == 1 ? 'Month' : 'Months' }}
 
-                                            •
+                                                @if($payment->membership->plan->shift)
+                                                    • {{ $payment->membership->plan->shift }}
+                                                @endif
 
-                                            {{ $payment->membership->plan->shift }}
+                                            </p>
 
-                                        </p>
+                                        </div>
 
-                                    </div>
+                                    @else
+
+                                        <div>
+
+                                            <p class="font-medium text-zinc-400">
+                                                Deleted Plan
+                                            </p>
+
+                                            <p class="text-xs text-zinc-600">
+                                                Membership record no longer exists
+                                            </p>
+
+                                        </div>
+
+                                    @endif
 
                                 </td>
 
@@ -273,9 +318,7 @@
                                 <td class="px-6 py-4">
 
                                     <span class="font-bold text-green-400">
-
-                                        ₹{{ number_format($payment->amount, 2) }}
-
+                                        ₹{{ number_format($payment->amount ?? 0, 2) }}
                                     </span>
 
                                 </td>
@@ -320,18 +363,18 @@
 
                                 </td>
 
-{{-- Actions --}}
-<td class="px-6 py-4">
 
-    <a
-        href="{{ route('payments.receipt', $payment) }}"
-        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-    >
-        Receipt
-    </a>
+                                {{-- Actions --}}
+                                <td class="px-6 py-4">
 
-</td>
+                                    <a
+                                        href="{{ route('payments.receipt', $payment) }}"
+                                        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                                    >
+                                        Receipt
+                                    </a>
 
+                                </td>
 
                             </tr>
 
@@ -387,9 +430,7 @@
         @if($payments->hasPages())
 
             <div>
-
                 {{ $payments->links() }}
-
             </div>
 
         @endif

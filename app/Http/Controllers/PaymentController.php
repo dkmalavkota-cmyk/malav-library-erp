@@ -42,6 +42,10 @@ class PaymentController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        /*
+         * Only active payment records are included.
+         * Soft-deleted payments are automatically excluded by Eloquent.
+         */
         $todayCollection = Payment::whereDate(
             'payment_date',
             today()
@@ -62,29 +66,27 @@ class PaymentController extends Controller
         ));
     }
 
-
     /**
      * Show fee collection form.
      */
     public function create()
-{
-    $memberships = Membership::with([
-            'student',
-            'plan',
-            'payments',
-        ])
-        ->where('status', 'Active')
-        ->whereHas('student')
-        ->whereHas('plan')
-        ->whereDoesntHave('payments')
-        ->latest()
-        ->get();
+    {
+        $memberships = Membership::with([
+                'student',
+                'plan',
+                'payments',
+            ])
+            ->where('status', 'Active')
+            ->whereHas('student')
+            ->whereHas('plan')
+            ->whereDoesntHave('payments')
+            ->latest()
+            ->get();
 
-    return view('payments.create', compact(
-        'memberships'
-    ));
-}
-
+        return view('payments.create', compact(
+            'memberships'
+        ));
+    }
 
     /**
      * Store payment.
@@ -133,7 +135,6 @@ class PaymentController extends Controller
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | Get Membership
@@ -147,6 +148,21 @@ class PaymentController extends Controller
             $validated['membership_id']
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Student must still exist
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $membership->student) {
+
+            return back()
+                ->withErrors([
+                    'membership_id' =>
+                        'The student associated with this membership no longer exists.',
+                ])
+                ->withInput();
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -162,26 +178,17 @@ class PaymentController extends Controller
                         'Only active memberships can receive payment.',
                 ])
                 ->withInput();
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
-        | Calculate Amount From Membership
+        | Calculate Amount
         |--------------------------------------------------------------------------
         */
 
         $planAmount = (float) $membership->final_amount;
 
         $discount = (float) ($validated['discount'] ?? 0);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Discount cannot be greater than plan amount
-        |--------------------------------------------------------------------------
-        */
 
         if ($discount > $planAmount) {
 
@@ -191,21 +198,12 @@ class PaymentController extends Controller
                         'Discount cannot be greater than the membership amount.',
                 ])
                 ->withInput();
-
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Final Payable Amount
-        |--------------------------------------------------------------------------
-        */
 
         $finalAmount = max(
             $planAmount - $discount,
             0
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -223,9 +221,7 @@ class PaymentController extends Controller
                         'Payment amount does not match the calculated payable amount.',
                 ])
                 ->withInput();
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -234,7 +230,6 @@ class PaymentController extends Controller
         */
 
         $receiptNo = $this->generateReceiptNumber();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -266,10 +261,9 @@ class PaymentController extends Controller
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
-        | Update Membership Discount
+        | Update Membership
         |--------------------------------------------------------------------------
         */
 
@@ -283,7 +277,6 @@ class PaymentController extends Controller
 
         ]);
 
-
         return redirect()
             ->route('payments.index')
             ->with(
@@ -292,20 +285,18 @@ class PaymentController extends Controller
             );
     }
 
-/**
- * Show payment receipt.
- */
-public function receipt(Payment $payment)
-{
-    $payment->load([
-        'student',
-        'membership.plan',
-    ]);
+    /**
+     * Show payment receipt.
+     */
+    public function receipt(Payment $payment)
+    {
+        $payment->load([
+            'student',
+            'membership.plan',
+        ]);
 
-    return view('payments.receipt', compact('payment'));
-}
-
-
+        return view('payments.receipt', compact('payment'));
+    }
 
     /**
      * Generate unique receipt number.
@@ -327,8 +318,6 @@ public function receipt(Payment $payment)
             )->exists()
         );
 
-
         return $receiptNo;
     }
 }
-

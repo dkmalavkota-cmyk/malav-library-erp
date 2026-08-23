@@ -3,8 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStudentRequest;
+use App\Models\AttendanceLog;
+use App\Models\Membership;
+use App\Models\Payment;
+use App\Models\Seat;
+use App\Models\SeatAssignment;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -18,34 +24,29 @@ class StudentController extends Controller
         $search = request('search');
         $status = request('status');
 
-            $students = Student::when($search, function ($query) use ($search) {
-
-    $query->where(function ($q) use ($search) {
-
-        $q->where('student_code', 'like', "%{$search}%")
-          ->orWhere('first_name', 'like', "%{$search}%")
-          ->orWhere('last_name', 'like', "%{$search}%")
-          ->orWhere('mobile', 'like', "%{$search}%");
-
-    });
-
-})
-->when($status, function ($query) use ($status) {
-
-    $query->where('status', $status);
-
-})
-->latest()
-->paginate(10)
-->withQueryString();
-
-
-
-   
+        $students = Student::when($search, function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('student_code', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%");
+            });
+        })
+        ->when($status, function ($query) use ($status) {
+            $query->where('status', $status);
+        })
+        ->latest()
+        ->paginate(10)
+        ->withQueryString();
 
         $totalStudents = Student::count();
+
         $activeStudents = Student::where('status', 'Active')->count();
-        $todayJoinings = Student::whereDate('joining_date', today())->count();
+
+        $todayJoinings = Student::whereDate(
+            'joining_date',
+            today()
+        )->count();
 
         return view('students.index', compact(
             'students',
@@ -56,44 +57,38 @@ class StudentController extends Controller
     }
 
     /**
- * Student ID Cards
- */
-public function idCards()
-{
-    $search = request('search');
+     * Student ID Cards
+     */
+    public function idCards()
+    {
+        $search = request('search');
 
-    $students = Student::when($search, function ($query) use ($search) {
+        $students = Student::when($search, function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('student_code', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%");
+            });
+        })
+        ->with([
+            'seatAssignments' => function ($query) {
+                $query->with([
+                    'seat.room',
+                    'membership.plan',
+                ])
+                ->where('status', 'Active')
+                ->whereNull('released_date')
+                ->latest('assigned_date');
+            },
+        ])
+        ->where('status', 'Active')
+        ->latest()
+        ->paginate(12)
+        ->withQueryString();
 
-        $query->where(function ($q) use ($search) {
-
-            $q->where('student_code', 'like', "%{$search}%")
-                ->orWhere('first_name', 'like', "%{$search}%")
-                ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('mobile', 'like', "%{$search}%");
-
-        });
-
-    })
-    ->with([
-        'seatAssignments' => function ($query) {
-
-            $query->with([
-                'seat.room',
-                'membership.plan',
-            ])
-            ->where('status', 'Active')
-            ->whereNull('released_date')
-            ->latest('assigned_date');
-
-        },
-    ])
-    ->where('status', 'Active')
-    ->latest()
-    ->paginate(12)
-    ->withQueryString();
-
-    return view('students.id-cards', compact('students'));
-}
+        return view('students.id-cards', compact('students'));
+    }
 
     /**
      * Add Student
@@ -106,16 +101,14 @@ public function idCards()
     /**
      * Save Student
      */
-        public function store(StoreStudentRequest $request)
-{
+    public function store(StoreStudentRequest $request)
+    {
+        $data = $request->validated();
 
-    $data = $request->validated();
-
-    if ($request->hasFile('photo')) {
-
-
-
-            $data['photo'] = $request->file('photo')->store('students', 'public');
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request
+                ->file('photo')
+                ->store('students', 'public');
         }
 
         Student::create($data);
@@ -128,75 +121,72 @@ public function idCards()
     /**
      * View Student
      */
-   /**
- * View Student
- */
-public function show(Student $student)
-{
-    $student->load([
-        'memberships' => function ($query) {
-            $query->with([
-                'plan',
-            ])
-            ->latest('start_date');
-        },
+    public function show(Student $student)
+    {
+        $student->load([
+            'memberships' => function ($query) {
+                $query->with([
+                    'plan',
+                ])
+                ->latest('start_date');
+            },
 
-        'seatAssignments' => function ($query) {
-            $query->with([
-                'seat.room',
-                'membership.plan',
-            ])
-            ->where('status', 'Active')
-            ->whereNull('released_date')
-            ->latest('assigned_date');
-        },
+            'seatAssignments' => function ($query) {
+                $query->with([
+                    'seat.room',
+                    'membership.plan',
+                ])
+                ->where('status', 'Active')
+                ->whereNull('released_date')
+                ->latest('assigned_date');
+            },
 
-        'payments' => function ($query) {
-            $query->with([
-                'membership.plan',
-            ])
-            ->latest('payment_date');
-        },
-    ]);
+            'payments' => function ($query) {
+                $query->with([
+                    'membership.plan',
+                ])
+                ->latest('payment_date');
+            },
+        ]);
 
-    $membership = $student->memberships->first();
+        $membership = $student->memberships->first();
 
-    $assignment = $student->seatAssignments->first();
+        $assignment = $student->seatAssignments->first();
 
-    $payment = $student->payments->first();
+        $payment = $student->payments->first();
 
-    return view('students.show', compact(
-        'student',
-        'membership',
-        'assignment',
-        'payment'
-    ));
-}
+        return view('students.show', compact(
+            'student',
+            'membership',
+            'assignment',
+            'payment'
+        ));
+    }
 
-/**
- * Print Student ID Card
- */
-public function idCard(Student $student)
-{
-    $student->load([
-        'seatAssignments' => function ($query) {
-            $query->with([
-                'seat.room',
-                'membership.plan',
-            ])
-            ->where('status', 'Active')
-            ->whereNull('released_date')
-            ->latest('assigned_date');
-        },
-    ]);
+    /**
+     * Print Student ID Card
+     */
+    public function idCard(Student $student)
+    {
+        $student->load([
+            'seatAssignments' => function ($query) {
+                $query->with([
+                    'seat.room',
+                    'membership.plan',
+                ])
+                ->where('status', 'Active')
+                ->whereNull('released_date')
+                ->latest('assigned_date');
+            },
+        ]);
 
-    $assignment = $student->seatAssignments->first();
+        $assignment = $student->seatAssignments->first();
 
-    return view('students.id-card', compact(
-        'student',
-        'assignment'
-    ));
-}
+        return view('students.id-card', compact(
+            'student',
+            'assignment'
+        ));
+    }
 
     /**
      * Edit Student
@@ -212,7 +202,6 @@ public function idCard(Student $student)
     public function update(Request $request, Student $student)
     {
         $data = $request->validate([
-
             'first_name' => 'required|string|max:100',
             'last_name' => 'nullable|string|max:100',
             'father_name' => 'nullable|string|max:150',
@@ -246,13 +235,20 @@ public function idCard(Student $student)
             'remarks' => 'nullable|string',
 
             'photo' => 'nullable|image|max:2048',
-
         ]);
 
         if ($request->hasFile('photo')) {
 
-            $data['photo'] = $request->file('photo')->store('students', 'public');
+            if (
+                $student->photo &&
+                Storage::disk('public')->exists($student->photo)
+            ) {
+                Storage::disk('public')->delete($student->photo);
+            }
 
+            $data['photo'] = $request
+                ->file('photo')
+                ->store('students', 'public');
         }
 
         $student->update($data);
@@ -263,18 +259,102 @@ public function idCard(Student $student)
     }
 
     /**
-     * Delete Student
+     * Delete Student and clean all related development/test records.
+     *
+     * Physical seats are NOT deleted.
+     * The assigned seat is simply returned to "available".
      */
     public function destroy(Student $student)
     {
-        if ($student->photo && Storage::disk('public')->exists($student->photo)) {
-            Storage::disk('public')->delete($student->photo);
+        $photo = $student->photo;
+
+        DB::beginTransaction();
+
+        try {
+
+            /*
+             * Release every seat assigned to this student.
+             */
+            $assignments = SeatAssignment::where(
+                'student_id',
+                $student->id
+            )->get();
+
+            foreach ($assignments as $assignment) {
+
+                if ($assignment->seat_id) {
+                    Seat::where('id', $assignment->seat_id)
+                        ->update([
+                            'status' => 'available',
+                            'updated_by' => auth()->id(),
+                        ]);
+                }
+
+                $assignment->delete();
+            }
+
+            /*
+             * Remove attendance records.
+             */
+            AttendanceLog::where(
+                'student_id',
+                $student->id
+            )->delete();
+
+            /*
+             * Remove payment records belonging to this student.
+             *
+             * This is appropriate for the current development/test
+             * environment. Production financial records should normally
+             * be retained/audited instead of being deleted.
+             */
+            Payment::where(
+                'student_id',
+                $student->id
+            )->delete();
+
+            /*
+             * Remove memberships.
+             */
+            Membership::where(
+                'student_id',
+                $student->id
+            )->delete();
+
+            /*
+             * Finally remove the student.
+             */
+            $student->delete();
+
+            DB::commit();
+
+            /*
+             * Remove stored student photo after successful DB transaction.
+             */
+            if (
+                $photo &&
+                Storage::disk('public')->exists($photo)
+            ) {
+                Storage::disk('public')->delete($photo);
+            }
+
+            return redirect()
+                ->route('students.index')
+                ->with(
+                    'success',
+                    'Student and all related test records deleted successfully.'
+                );
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return redirect()
+                ->route('students.index')
+                ->with(
+                    'error',
+                    'Student could not be deleted: ' . $e->getMessage()
+                );
         }
-
-        $student->delete();
-
-        return redirect()
-            ->route('students.index')
-            ->with('success', 'Student deleted successfully.');
     }
 }
