@@ -11,6 +11,7 @@ class SeatAssignment extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'student_id',
         'seat_id',
         'membership_id',
@@ -26,6 +27,11 @@ class SeatAssignment extends Model
         'assigned_date' => 'date',
         'released_date' => 'date',
     ];
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     public function student()
     {

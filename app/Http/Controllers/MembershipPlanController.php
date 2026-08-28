@@ -14,35 +14,99 @@ class MembershipPlanController extends Controller
      */
     public function index()
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Current Library
+        |--------------------------------------------------------------------------
+        */
+
+        $libraryId = auth()->user()->library_id;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Membership Plans
+        |--------------------------------------------------------------------------
+        */
+
         $search = request('search');
         $status = request('status');
 
-        $plans = MembershipPlan::query()
+        $plans = MembershipPlan::where(
+                'library_id',
+                $libraryId
+            )
             ->when($search, function ($query) use ($search) {
+
                 $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
+
+                    $q->where(
+                        'name',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'code',
+                        'like',
+                        "%{$search}%"
+                    );
+
                 });
+
             })
-            ->when($status !== null && $status !== '', function ($query) use ($status) {
-                $query->where('is_active', $status);
-            })
+            ->when(
+                $status !== null && $status !== '',
+                function ($query) use ($status) {
+
+                    $query->where(
+                        'is_active',
+                        $status
+                    );
+
+                }
+            )
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        $totalPlans = MembershipPlan::count();
 
-        $activePlans = MembershipPlan::where('is_active', true)->count();
+        /*
+        |--------------------------------------------------------------------------
+        | Statistics
+        |--------------------------------------------------------------------------
+        */
 
-        $inactivePlans = MembershipPlan::where('is_active', false)->count();
+        $totalPlans = MembershipPlan::where(
+            'library_id',
+            $libraryId
+        )->count();
 
-        return view('membership-plans.index', compact(
-            'plans',
-            'totalPlans',
-            'activePlans',
-            'inactivePlans'
-        ));
+
+        $activePlans = MembershipPlan::where(
+                'library_id',
+                $libraryId
+            )
+            ->where('is_active', true)
+            ->count();
+
+
+        $inactivePlans = MembershipPlan::where(
+                'library_id',
+                $libraryId
+            )
+            ->where('is_active', false)
+            ->count();
+
+
+        return view(
+            'membership-plans.index',
+            compact(
+                'plans',
+                'totalPlans',
+                'activePlans',
+                'inactivePlans'
+            )
+        );
     }
 
 
@@ -51,11 +115,25 @@ class MembershipPlanController extends Controller
      */
     public function create()
     {
-        $services = Service::where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        /*
+        |--------------------------------------------------------------------------
+        | Services
+        |--------------------------------------------------------------------------
+        */
 
-        return view('membership-plans.create', compact('services'));
+        $services = Service::where(
+        'library_id',
+        auth()->user()->library_id
+    )
+    ->where('is_active', true)
+    ->orderBy('name')
+    ->get();
+
+
+        return view(
+            'membership-plans.create',
+            compact('services')
+        );
     }
 
 
@@ -64,37 +142,141 @@ class MembershipPlanController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'max:255'],
-            'duration_months' => ['required', 'integer', 'min:1'],
-            'shift' => ['required', 'in:Morning,Evening,Full Day'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'badge_color' => ['required'],
-            'description' => ['nullable'],
-            'is_active' => ['required', 'boolean'],
+        /*
+        |--------------------------------------------------------------------------
+        | Current Library
+        |--------------------------------------------------------------------------
+        */
 
-            'services' => ['nullable', 'array'],
-            'services.*' => ['integer', 'exists:services,id'],
+        $libraryId = auth()->user()->library_id;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Request
+        |--------------------------------------------------------------------------
+        */
+
+        $validated = $request->validate([
+
+            'name' => [
+                'required',
+                'max:255',
+            ],
+
+            'duration_months' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+
+            'shift' => [
+                'required',
+                'in:Morning,Evening,Full Day',
+            ],
+
+            'price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'badge_color' => [
+                'required',
+            ],
+
+            'description' => [
+                'nullable',
+            ],
+
+            'is_active' => [
+                'required',
+                'boolean',
+            ],
+
+            'services' => [
+                'nullable',
+                'array',
+            ],
+
+           'services.*' => [
+    'integer',
+    function ($attribute, $value, $fail) {
+        $exists = Service::where('id', $value)
+            ->where(
+                'library_id',
+                auth()->user()->library_id
+            )
+            ->exists();
+
+        if (! $exists) {
+            $fail('Invalid service selected.');
+        }
+    },
+],
+
         ]);
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Plan Code
+        |--------------------------------------------------------------------------
+        */
+
+        $code = strtoupper(
+            Str::slug(
+                $validated['name'],
+                '_'
+            )
+            . '_'
+            . $validated['duration_months']
+            . 'M_'
+            . Str::slug(
+                $validated['shift'],
+                '_'
+            )
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create Membership Plan
+        |--------------------------------------------------------------------------
+        */
+
         $membershipPlan = MembershipPlan::create([
-            'name' => $validated['name'],
 
-            'code' => strtoupper(
-                Str::slug($validated['name'], '_')
-                . '_' .
-                $validated['duration_months'] . 'M_' .
-                Str::slug($validated['shift'], '_')
-            ),
+            'library_id' =>
+                $libraryId,
 
-            'duration_months' => $validated['duration_months'],
-            'shift' => $validated['shift'],
-            'price' => $validated['price'],
-            'badge_color' => $validated['badge_color'],
-            'description' => $validated['description'] ?? null,
-            'is_active' => $validated['is_active'],
-            'created_by' => auth()->id(),
+            'name' =>
+                $validated['name'],
+
+            'code' =>
+                $code,
+
+            'duration_months' =>
+                $validated['duration_months'],
+
+            'shift' =>
+                $validated['shift'],
+
+            'price' =>
+                $validated['price'],
+
+            'badge_color' =>
+                $validated['badge_color'],
+
+            'description' =>
+                $validated['description'] ?? null,
+
+            'is_active' =>
+                $validated['is_active'],
+
+            'created_by' =>
+                auth()->id(),
+
         ]);
 
 
@@ -111,75 +293,241 @@ class MembershipPlanController extends Controller
 
         return redirect()
             ->route('membership-plans.index')
-            ->with('success', 'Membership Plan created successfully.');
+            ->with(
+                'success',
+                'Membership Plan created successfully.'
+            );
     }
 
 
     /**
      * Show the specified resource.
      */
-    public function show(MembershipPlan $membershipPlan)
-    {
+    public function show(
+        MembershipPlan $membershipPlan
+    ) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Library Protection
+        |--------------------------------------------------------------------------
+        */
+
+        abort_unless(
+            $membershipPlan->library_id ===
+                auth()->user()->library_id,
+            404
+        );
+
+
         $membershipPlan->load('services');
 
-        return view('membership-plans.show', compact('membershipPlan'));
+
+        return view(
+            'membership-plans.show',
+            compact('membershipPlan')
+        );
     }
 
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(MembershipPlan $membershipPlan)
-    {
-        $services = Service::where('is_active', true)
-            ->orderBy('name')
-            ->get();
+    public function edit(
+        MembershipPlan $membershipPlan
+    ) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Library Protection
+        |--------------------------------------------------------------------------
+        */
+
+        abort_unless(
+            $membershipPlan->library_id ===
+                auth()->user()->library_id,
+            404
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Services
+        |--------------------------------------------------------------------------
+        */
+
+       $services = Service::where(
+        'library_id',
+        auth()->user()->library_id
+    )
+    ->where('is_active', true)
+    ->orderBy('name')
+    ->get();
+
 
         $membershipPlan->load('services');
 
-        return view('membership-plans.edit', compact(
-            'membershipPlan',
-            'services'
-        ));
+
+        return view(
+            'membership-plans.edit',
+            compact(
+                'membershipPlan',
+                'services'
+            )
+        );
     }
 
 
     /**
      * Update the specified resource.
      */
-    public function update(Request $request, MembershipPlan $membershipPlan)
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'max:255'],
-            'duration_months' => ['required', 'integer', 'min:1'],
-            'shift' => ['required', 'in:Morning,Evening,Full Day'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'badge_color' => ['required'],
-            'description' => ['nullable'],
-            'is_active' => ['required', 'boolean'],
+    public function update(
+        Request $request,
+        MembershipPlan $membershipPlan
+    ) {
 
-            'services' => ['nullable', 'array'],
-            'services.*' => ['integer', 'exists:services,id'],
+        /*
+        |--------------------------------------------------------------------------
+        | Current Library
+        |--------------------------------------------------------------------------
+        */
+
+        $libraryId = auth()->user()->library_id;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Library Protection
+        |--------------------------------------------------------------------------
+        */
+
+        abort_unless(
+            $membershipPlan->library_id === $libraryId,
+            404
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Request
+        |--------------------------------------------------------------------------
+        */
+
+        $validated = $request->validate([
+
+            'name' => [
+                'required',
+                'max:255',
+            ],
+
+            'duration_months' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+
+            'shift' => [
+                'required',
+                'in:Morning,Evening,Full Day',
+            ],
+
+            'price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'badge_color' => [
+                'required',
+            ],
+
+            'description' => [
+                'nullable',
+            ],
+
+            'is_active' => [
+                'required',
+                'boolean',
+            ],
+
+            'services' => [
+                'nullable',
+                'array',
+            ],
+
+           'services.*' => [
+    'integer',
+    function ($attribute, $value, $fail) use ($libraryId) {
+        $exists = Service::where('id', $value)
+            ->where('library_id', $libraryId)
+            ->exists();
+
+        if (! $exists) {
+            $fail('Invalid service selected.');
+        }
+    },
+],
+           
+
         ]);
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Plan Code
+        |--------------------------------------------------------------------------
+        */
+
+        $code = strtoupper(
+            Str::slug(
+                $validated['name'],
+                '_'
+            )
+            . '_'
+            . $validated['duration_months']
+            . 'M_'
+            . Str::slug(
+                $validated['shift'],
+                '_'
+            )
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update Membership Plan
+        |--------------------------------------------------------------------------
+        */
+
         $membershipPlan->update([
-            'name' => $validated['name'],
 
-            'code' => strtoupper(
-                Str::slug($validated['name'], '_')
-                . '_' .
-                $validated['duration_months'] . 'M_' .
-                Str::slug($validated['shift'], '_')
-            ),
+            'name' =>
+                $validated['name'],
 
-            'duration_months' => $validated['duration_months'],
-            'shift' => $validated['shift'],
-            'price' => $validated['price'],
-            'badge_color' => $validated['badge_color'],
-            'description' => $validated['description'] ?? null,
-            'is_active' => $validated['is_active'],
-            'updated_by' => auth()->id(),
+            'code' =>
+                $code,
+
+            'duration_months' =>
+                $validated['duration_months'],
+
+            'shift' =>
+                $validated['shift'],
+
+            'price' =>
+                $validated['price'],
+
+            'badge_color' =>
+                $validated['badge_color'],
+
+            'description' =>
+                $validated['description'] ?? null,
+
+            'is_active' =>
+                $validated['is_active'],
+
+            'updated_by' =>
+                auth()->id(),
+
         ]);
 
 
@@ -196,19 +544,47 @@ class MembershipPlanController extends Controller
 
         return redirect()
             ->route('membership-plans.index')
-            ->with('success', 'Membership Plan updated successfully.');
+            ->with(
+                'success',
+                'Membership Plan updated successfully.'
+            );
     }
 
 
     /**
      * Remove the specified resource.
      */
-    public function destroy(MembershipPlan $membershipPlan)
-    {
+    public function destroy(
+        MembershipPlan $membershipPlan
+    ) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Library Protection
+        |--------------------------------------------------------------------------
+        */
+
+        abort_unless(
+            $membershipPlan->library_id ===
+                auth()->user()->library_id,
+            404
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete
+        |--------------------------------------------------------------------------
+        */
+
         $membershipPlan->delete();
+
 
         return redirect()
             ->route('membership-plans.index')
-            ->with('success', 'Membership Plan deleted successfully.');
+            ->with(
+                'success',
+                'Membership Plan deleted successfully.'
+            );
     }
 }

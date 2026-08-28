@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 
+@php
+    $library = auth()->user()?->library;
+    $libraryName = $library?->name ?? 'Library';
+    $libraryInitial = strtoupper(substr($libraryName, 0, 1));
+@endphp
+
 <head>
     <meta charset="UTF-8">
 
@@ -9,8 +15,7 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Malav Library - Attendance Kiosk</title>
-
+<title>{{ $libraryName }} - Attendance Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -27,13 +32,13 @@
 
     <div class="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl">
 
-        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-yellow-400 text-4xl font-black text-black">
-            M
-        </div>
+       <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-yellow-400 text-4xl font-black text-black">
+    {{ $libraryInitial }}
+</div>
 
         <h2 class="mt-6 text-2xl font-bold">
-            Malav Library
-        </h2>
+    {{ $libraryName }}
+</h2>
 
         <p class="mt-2 text-zinc-400">
             Attendance Kiosk
@@ -64,15 +69,14 @@
 
             <div class="flex items-center gap-3">
 
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-400 text-2xl font-black text-black">
-                    M
-                </div>
+               <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-400 text-2xl font-black text-black">
+    {{ $libraryInitial }}
+</div>
 
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight">
-                        MALAV LIBRARY
-                    </h1>
-
+                  <h1 class="text-xl font-extrabold tracking-tight">
+    {{ strtoupper($libraryName) }}
+</h1>
                     <p class="text-xs text-zinc-400">
                         Attendance Kiosk
                     </p>
@@ -116,7 +120,7 @@
                     </h2>
 
                     <p class="mx-auto mt-2 max-w-md text-sm text-zinc-400">
-                        Place the QR code on your Malav Library ID card
+                        Place the QR code on your {{ $libraryName }} ID card
                         in front of the camera.
                     </p>
 
@@ -338,9 +342,9 @@
     {{-- Footer --}}
     <footer class="border-t border-zinc-800 bg-zinc-900 px-5 py-3 text-center">
 
-        <p class="text-xs text-zinc-600">
-            Malav Library • Smart Attendance System
-        </p>
+       <p class="text-xs text-zinc-600">
+    {{ $libraryName }} • Smart Attendance System
+</p>
 
     </footer>
 
@@ -700,7 +704,7 @@ function playAttendanceSound(type)
     if (!student) {
 
         showError(
-            'Invalid QR code. Please use your Malav Library ID card.'
+'Invalid QR code. Please use your {{ addslashes($libraryName) }} ID card.'
         );
 
         processing = false;

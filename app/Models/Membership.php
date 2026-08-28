@@ -11,6 +11,7 @@ class Membership extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'student_id',
         'membership_plan_id',
         'start_date',
@@ -28,6 +29,11 @@ class Membership extends Model
         'start_date' => 'date',
         'end_date' => 'date',
     ];
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     public function student()
     {

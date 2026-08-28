@@ -21,32 +21,36 @@ class StudentController extends Controller
      */
     public function index()
     {
+        $libraryId = auth()->user()->library_id;
+
         $search = request('search');
         $status = request('status');
 
-        $students = Student::when($search, function ($query) use ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('student_code', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('mobile', 'like', "%{$search}%");
-            });
-        })
-        ->when($status, function ($query) use ($status) {
-            $query->where('status', $status);
-        })
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+        $students = Student::where('library_id', $libraryId)
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('student_code', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%");
+                });
+            })
+            ->when($status, function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
-        $totalStudents = Student::count();
+        $totalStudents = Student::where('library_id', $libraryId)->count();
 
-        $activeStudents = Student::where('status', 'Active')->count();
+        $activeStudents = Student::where('library_id', $libraryId)
+            ->where('status', 'Active')
+            ->count();
 
-        $todayJoinings = Student::whereDate(
-            'joining_date',
-            today()
-        )->count();
+        $todayJoinings = Student::where('library_id', $libraryId)
+            ->whereDate('joining_date', today())
+            ->count();
 
         return view('students.index', compact(
             'students',
@@ -61,31 +65,34 @@ class StudentController extends Controller
      */
     public function idCards()
     {
+        $libraryId = auth()->user()->library_id;
+
         $search = request('search');
 
-        $students = Student::when($search, function ($query) use ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('student_code', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('mobile', 'like', "%{$search}%");
-            });
-        })
-        ->with([
-            'seatAssignments' => function ($query) {
-                $query->with([
-                    'seat.room',
-                    'membership.plan',
-                ])
-                ->where('status', 'Active')
-                ->whereNull('released_date')
-                ->latest('assigned_date');
-            },
-        ])
-        ->where('status', 'Active')
-        ->latest()
-        ->paginate(12)
-        ->withQueryString();
+        $students = Student::where('library_id', $libraryId)
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('student_code', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%");
+                });
+            })
+            ->with([
+                'seatAssignments' => function ($query) {
+                    $query->with([
+                        'seat.room',
+                        'membership.plan',
+                    ])
+                    ->where('status', 'Active')
+                    ->whereNull('released_date')
+                    ->latest('assigned_date');
+                },
+            ])
+            ->where('status', 'Active')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
         return view('students.id-cards', compact('students'));
     }
@@ -105,6 +112,8 @@ class StudentController extends Controller
     {
         $data = $request->validated();
 
+        $data['library_id'] = auth()->user()->library_id;
+
         if ($request->hasFile('photo')) {
             $data['photo'] = $request
                 ->file('photo')
@@ -123,6 +132,11 @@ class StudentController extends Controller
      */
     public function show(Student $student)
     {
+        abort_unless(
+            $student->library_id === auth()->user()->library_id,
+            404
+        );
+
         $student->load([
             'memberships' => function ($query) {
                 $query->with([
@@ -167,32 +181,45 @@ class StudentController extends Controller
      * Print Student ID Card
      */
     public function idCard(Student $student)
-    {
-        $student->load([
-            'seatAssignments' => function ($query) {
-                $query->with([
-                    'seat.room',
-                    'membership.plan',
-                ])
-                ->where('status', 'Active')
-                ->whereNull('released_date')
-                ->latest('assigned_date');
-            },
-        ]);
+{
+    $library = auth()->user()->library;
 
-        $assignment = $student->seatAssignments->first();
+    abort_unless(
+        $library && $student->library_id === $library->id,
+        404
+    );
 
-        return view('students.id-card', compact(
-            'student',
-            'assignment'
-        ));
-    }
+    $student->load([
+        'seatAssignments' => function ($query) {
+            $query->with([
+                'seat.room',
+                'membership.plan',
+            ])
+            ->where('status', 'Active')
+            ->whereNull('released_date')
+            ->latest('assigned_date');
+        },
+    ]);
+
+    $assignment = $student->seatAssignments->first();
+
+    return view('students.id-card', compact(
+        'student',
+        'assignment',
+        'library'
+    ));
+}
 
     /**
      * Edit Student
      */
     public function edit(Student $student)
     {
+        abort_unless(
+            $student->library_id === auth()->user()->library_id,
+            404
+        );
+
         return view('students.edit', compact('student'));
     }
 
@@ -201,6 +228,11 @@ class StudentController extends Controller
      */
     public function update(Request $request, Student $student)
     {
+        abort_unless(
+            $student->library_id === auth()->user()->library_id,
+            404
+        );
+
         $data = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'nullable|string|max:100',
@@ -209,7 +241,14 @@ class StudentController extends Controller
             'mobile' => [
                 'required',
                 'max:20',
-                Rule::unique('students')->ignore($student->id),
+                Rule::unique('students')
+                    ->where(function ($query) {
+                        return $query->where(
+                            'library_id',
+                            auth()->user()->library_id
+                        );
+                    })
+                    ->ignore($student->id),
             ],
 
             'whatsapp' => 'nullable|max:20',
@@ -217,7 +256,14 @@ class StudentController extends Controller
             'email' => [
                 'nullable',
                 'email',
-                Rule::unique('students')->ignore($student->id),
+                Rule::unique('students')
+                    ->where(function ($query) {
+                        return $query->where(
+                            'library_id',
+                            auth()->user()->library_id
+                        );
+                    })
+                    ->ignore($student->id),
             ],
 
             'gender' => 'required|in:Male,Female,Other',
@@ -266,6 +312,11 @@ class StudentController extends Controller
      */
     public function destroy(Student $student)
     {
+        abort_unless(
+            $student->library_id === auth()->user()->library_id,
+            404
+        );
+
         $photo = $student->photo;
 
         DB::beginTransaction();
@@ -276,14 +327,23 @@ class StudentController extends Controller
              * Release every seat assigned to this student.
              */
             $assignments = SeatAssignment::where(
+                'library_id',
+                auth()->user()->library_id
+            )
+            ->where(
                 'student_id',
                 $student->id
-            )->get();
+            )
+            ->get();
 
             foreach ($assignments as $assignment) {
 
                 if ($assignment->seat_id) {
                     Seat::where('id', $assignment->seat_id)
+                        ->where(
+                            'library_id',
+                            auth()->user()->library_id
+                        )
                         ->update([
                             'status' => 'available',
                             'updated_by' => auth()->id(),
@@ -297,29 +357,40 @@ class StudentController extends Controller
              * Remove attendance records.
              */
             AttendanceLog::where(
+                'library_id',
+                auth()->user()->library_id
+            )
+            ->where(
                 'student_id',
                 $student->id
-            )->delete();
+            )
+            ->delete();
 
             /*
              * Remove payment records belonging to this student.
-             *
-             * This is appropriate for the current development/test
-             * environment. Production financial records should normally
-             * be retained/audited instead of being deleted.
              */
             Payment::where(
+                'library_id',
+                auth()->user()->library_id
+            )
+            ->where(
                 'student_id',
                 $student->id
-            )->delete();
+            )
+            ->delete();
 
             /*
              * Remove memberships.
              */
             Membership::where(
+                'library_id',
+                auth()->user()->library_id
+            )
+            ->where(
                 'student_id',
                 $student->id
-            )->delete();
+            )
+            ->delete();
 
             /*
              * Finally remove the student.

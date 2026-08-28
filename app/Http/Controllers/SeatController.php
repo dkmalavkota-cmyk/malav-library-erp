@@ -15,7 +15,10 @@ class SeatController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Seat::with('room');
+        $libraryId = auth()->user()->library_id;
+
+        $query = Seat::with('room')
+            ->where('library_id', $libraryId);
 
         // Search
         if ($request->filled('search')) {
@@ -45,11 +48,19 @@ class SeatController extends Controller
 
         return view('seats.index', [
             'seats' => $seats,
-            'rooms' => Room::orderBy('name')->get(),
-            'totalSeats' => Seat::count(),
-            'availableSeats' => Seat::where('status', 'available')->count(),
-            'occupiedSeats' => Seat::where('status', 'occupied')->count(),
-            'maintenanceSeats' => Seat::where('status', 'maintenance')->count(),
+            'rooms' => Room::where('library_id', $libraryId)
+                ->orderBy('name')
+                ->get(),
+            'totalSeats' => Seat::where('library_id', $libraryId)->count(),
+            'availableSeats' => Seat::where('library_id', $libraryId)
+                ->where('status', 'available')
+                ->count(),
+            'occupiedSeats' => Seat::where('library_id', $libraryId)
+                ->where('status', 'occupied')
+                ->count(),
+            'maintenanceSeats' => Seat::where('library_id', $libraryId)
+                ->where('status', 'maintenance')
+                ->count(),
         ]);
     }
 
@@ -61,12 +72,13 @@ class SeatController extends Controller
      */
     public function generate()
     {
+        $libraryId = auth()->user()->library_id;
+
         /*
-         * Get all active rooms having seat capacity.
-         *
-         * Room names are intentionally NOT hard-coded.
+         * Get active rooms belonging to the current library.
          */
-        $rooms = Room::where('status', 'Active')
+        $rooms = Room::where('library_id', $libraryId)
+            ->where('status', 'Active')
             ->where('total_seats', '>', 0)
             ->orderBy('id')
             ->get();
@@ -83,10 +95,9 @@ class SeatController extends Controller
         /*
          * Prevent accidental duplicate generation.
          *
-         * Once seats exist, Generate Seats will not create
-         * another duplicate set.
+         * Check only the current library.
          */
-        if (Seat::exists()) {
+        if (Seat::where('library_id', $libraryId)->exists()) {
             return redirect()
                 ->route('seats.index')
                 ->with(
@@ -139,6 +150,7 @@ class SeatController extends Controller
                     $tableNo = (int) ceil($i / 15);
 
                     Seat::create([
+                        'library_id'  => $libraryId,
                         'room_id'     => $room->id,
                         'table_no'    => $tableNo,
                         'seat_number' => $seatNumber,
@@ -177,21 +189,26 @@ class SeatController extends Controller
      */
     public function layout()
     {
-        $rooms = Room::with([
-            'seats' => function ($query) {
+        $libraryId = auth()->user()->library_id;
 
-                $query
-                    ->orderBy('table_no')
-                    ->orderByRaw("
-                        CASE
-                            WHEN seat_number LIKE 'W%' THEN 999
-                            ELSE CAST(seat_number AS UNSIGNED)
-                        END
-                    ")
-                    ->orderBy('seat_number');
+        $rooms = Room::where('library_id', $libraryId)
+            ->with([
+                'seats' => function ($query) use ($libraryId) {
 
-            }
-        ])->get();
+                    $query
+                        ->where('library_id', $libraryId)
+                        ->orderBy('table_no')
+                        ->orderByRaw("
+                            CASE
+                                WHEN seat_number LIKE 'W%' THEN 999
+                                ELSE CAST(seat_number AS UNSIGNED)
+                            END
+                        ")
+                        ->orderBy('seat_number');
+
+                }
+            ])
+            ->get();
 
         return view('seats.layout', compact('rooms'));
     }

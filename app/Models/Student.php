@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use App\Models\Library;
 
 class Student extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'student_code',
         'photo',
         'first_name',
@@ -45,13 +47,36 @@ class Student extends Model
     {
         static::creating(function ($student) {
 
-            if (empty($student->student_code)) {
+    if (empty($student->student_code)) {
 
-                $lastId = (DB::table('students')->max('id') ?? 0) + 1;
+        $library = $student->library_id
+            ? Library::find($student->library_id)
+            : null;
 
-                $student->student_code = 'ML' . str_pad($lastId, 6, '0', STR_PAD_LEFT);
-            }
-        });
+        $prefix = $library?->student_prefix ?: 'LIB';
+
+        $lastId = (
+            DB::table('students')
+                ->where('library_id', $student->library_id)
+                ->max('id')
+            ?? 0
+        ) + 1;
+
+        $student->student_code =
+            strtoupper($prefix) .
+            str_pad(
+                $lastId,
+                6,
+                '0',
+                STR_PAD_LEFT
+            );
+    }
+});
+    }
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
     }
 
     public function memberships()
@@ -75,10 +100,10 @@ class Student extends Model
     }
 
     /**
- * Full Name Accessor
- */
-public function getFullNameAttribute(): string
-{
-    return trim($this->first_name . ' ' . $this->last_name);
-}
+     * Full Name Accessor
+     */
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
 }

@@ -14,9 +14,12 @@ class PaymentController extends Controller
      */
     public function index()
     {
+        $libraryId = auth()->user()->library_id;
+
         $search = request('search');
 
-        $payments = Payment::with([
+        $payments = Payment::where('library_id', $libraryId)
+            ->with([
                 'student',
                 'membership.plan',
             ])
@@ -46,17 +49,24 @@ class PaymentController extends Controller
          * Only active payment records are included.
          * Soft-deleted payments are automatically excluded by Eloquent.
          */
-        $todayCollection = Payment::whereDate(
-            'payment_date',
-            today()
+        $todayCollection = Payment::where('library_id', $libraryId)
+            ->whereDate(
+                'payment_date',
+                today()
+            )
+            ->sum('amount');
+
+        $totalCollection = Payment::where(
+            'library_id',
+            $libraryId
         )->sum('amount');
 
-        $totalCollection = Payment::sum('amount');
-
-        $todayPayments = Payment::whereDate(
-            'payment_date',
-            today()
-        )->count();
+        $todayPayments = Payment::where('library_id', $libraryId)
+            ->whereDate(
+                'payment_date',
+                today()
+            )
+            ->count();
 
         return view('payments.index', compact(
             'payments',
@@ -71,7 +81,13 @@ class PaymentController extends Controller
      */
     public function create()
     {
-        $memberships = Membership::with([
+        $libraryId = auth()->user()->library_id;
+
+        $memberships = Membership::where(
+            'library_id',
+            $libraryId
+        )
+            ->with([
                 'student',
                 'plan',
                 'payments',
@@ -93,12 +109,13 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $libraryId = auth()->user()->library_id;
 
-            'membership_id' => [
-                'required',
-                'exists:memberships,id',
-            ],
+        $validated = $request->validate([
+'membership_id' => [
+    'required',
+    'integer',
+],
 
             'amount' => [
                 'required',
@@ -141,12 +158,17 @@ class PaymentController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $membership = Membership::with([
-            'student',
-            'plan',
-        ])->findOrFail(
-            $validated['membership_id']
-        );
+        $membership = Membership::where(
+            'library_id',
+            $libraryId
+        )
+            ->with([
+                'student',
+                'plan',
+            ])
+            ->findOrFail(
+                $validated['membership_id']
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -239,17 +261,26 @@ class PaymentController extends Controller
 
         Payment::create([
 
-            'student_id' => $membership->student_id,
+            'library_id' =>
+                $libraryId,
 
-            'membership_id' => $membership->id,
+            'student_id' =>
+                $membership->student_id,
 
-            'receipt_no' => $receiptNo,
+            'membership_id' =>
+                $membership->id,
 
-            'amount' => $finalAmount,
+            'receipt_no' =>
+                $receiptNo,
 
-            'payment_mode' => $validated['payment_mode'],
+            'amount' =>
+                $finalAmount,
 
-            'payment_date' => $validated['payment_date'],
+            'payment_mode' =>
+                $validated['payment_mode'],
+
+            'payment_date' =>
+                $validated['payment_date'],
 
             'transaction_id' =>
                 $validated['transaction_id'] ?? null,
@@ -257,7 +288,8 @@ class PaymentController extends Controller
             'remarks' =>
                 $validated['remarks'] ?? null,
 
-            'created_by' => auth()->id(),
+            'created_by' =>
+                auth()->id(),
 
         ]);
 
@@ -269,11 +301,14 @@ class PaymentController extends Controller
 
         $membership->update([
 
-            'discount' => $discount,
+            'discount' =>
+                $discount,
 
-            'final_amount' => $finalAmount,
+            'final_amount' =>
+                $finalAmount,
 
-            'updated_by' => auth()->id(),
+            'updated_by' =>
+                auth()->id(),
 
         ]);
 
@@ -290,12 +325,20 @@ class PaymentController extends Controller
      */
     public function receipt(Payment $payment)
     {
+        abort_unless(
+            $payment->library_id === auth()->user()->library_id,
+            404
+        );
+
         $payment->load([
             'student',
             'membership.plan',
         ]);
 
-        return view('payments.receipt', compact('payment'));
+        return view(
+            'payments.receipt',
+            compact('payment')
+        );
     }
 
     /**
@@ -303,6 +346,8 @@ class PaymentController extends Controller
      */
     private function generateReceiptNumber(): string
     {
+        $libraryId = auth()->user()->library_id;
+
         do {
 
             $receiptNo =
@@ -313,9 +358,14 @@ class PaymentController extends Controller
 
         } while (
             Payment::where(
-                'receipt_no',
-                $receiptNo
-            )->exists()
+                'library_id',
+                $libraryId
+            )
+                ->where(
+                    'receipt_no',
+                    $receiptNo
+                )
+                ->exists()
         );
 
         return $receiptNo;

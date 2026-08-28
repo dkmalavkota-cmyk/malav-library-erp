@@ -13,6 +13,8 @@ class ExpenseController extends Controller
      */
     public function index()
     {
+        $libraryId = auth()->user()->library_id;
+
         $search = trim(request('search', ''));
 
         $category = request('category');
@@ -21,14 +23,14 @@ class ExpenseController extends Controller
 
         $date = request('date');
 
-
         /*
         |--------------------------------------------------------------------------
         | Expenses
         |--------------------------------------------------------------------------
         */
 
-        $expenses = Expense::with([
+        $expenses = Expense::where('library_id', $libraryId)
+            ->with([
                 'creator',
             ])
 
@@ -53,9 +55,7 @@ class ExpenseController extends Controller
                         'like',
                         "%{$search}%"
                     );
-
                 });
-
             })
 
             ->when($category, function ($query) use ($category) {
@@ -64,7 +64,6 @@ class ExpenseController extends Controller
                     'category',
                     $category
                 );
-
             })
 
             ->when($paymentMode, function ($query) use ($paymentMode) {
@@ -73,7 +72,6 @@ class ExpenseController extends Controller
                     'payment_mode',
                     $paymentMode
                 );
-
             })
 
             ->when($date, function ($query) use ($date) {
@@ -82,7 +80,6 @@ class ExpenseController extends Controller
                     'expense_date',
                     $date
                 );
-
             })
 
             ->latest('expense_date')
@@ -90,38 +87,39 @@ class ExpenseController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-
         /*
         |--------------------------------------------------------------------------
         | Expense Statistics
         |--------------------------------------------------------------------------
         */
 
-        $todayExpense = Expense::whereDate(
-            'expense_date',
-            today()
-        )->sum('amount');
+        $todayExpense = Expense::where('library_id', $libraryId)
+            ->whereDate(
+                'expense_date',
+                today()
+            )
+            ->sum('amount');
 
+        $monthExpense = Expense::where('library_id', $libraryId)
+            ->whereMonth(
+                'expense_date',
+                now()->month
+            )
+            ->whereYear(
+                'expense_date',
+                now()->year
+            )
+            ->sum('amount');
 
-        $monthExpense = Expense::whereMonth(
-            'expense_date',
-            now()->month
-        )
-        ->whereYear(
-            'expense_date',
-            now()->year
-        )
-        ->sum('amount');
+        $totalExpense = Expense::where('library_id', $libraryId)
+            ->sum('amount');
 
-
-        $totalExpense = Expense::sum('amount');
-
-
-        $todayExpenseCount = Expense::whereDate(
-            'expense_date',
-            today()
-        )->count();
-
+        $todayExpenseCount = Expense::where('library_id', $libraryId)
+            ->whereDate(
+                'expense_date',
+                today()
+            )
+            ->count();
 
         /*
         |--------------------------------------------------------------------------
@@ -130,12 +128,12 @@ class ExpenseController extends Controller
         */
 
         $categories = Expense::query()
+            ->where('library_id', $libraryId)
             ->select('category')
             ->whereNotNull('category')
             ->distinct()
             ->orderBy('category')
             ->pluck('category');
-
 
         /*
         |--------------------------------------------------------------------------
@@ -153,7 +151,6 @@ class ExpenseController extends Controller
         ));
     }
 
-
     /**
      * Show create expense form.
      */
@@ -163,16 +160,20 @@ class ExpenseController extends Controller
     }
 
     /**
- * Show edit expense form.
- */
-public function edit(Expense $expense)
-{
-    return view(
-        'expenses.edit',
-        compact('expense')
-    );
-}
+     * Show edit expense form.
+     */
+    public function edit(Expense $expense)
+    {
+        abort_unless(
+            $expense->library_id === auth()->user()->library_id,
+            404
+        );
 
+        return view(
+            'expenses.edit',
+            compact('expense')
+        );
+    }
 
     /**
      * Store expense.
@@ -213,9 +214,7 @@ public function edit(Expense $expense)
                 'required',
                 'in:Cash,UPI,Card,Bank Transfer',
             ],
-
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -224,6 +223,9 @@ public function edit(Expense $expense)
         */
 
         Expense::create([
+
+            'library_id' =>
+                auth()->user()->library_id,
 
             'expense_no' =>
                 $this->generateExpenseNumber(),
@@ -248,9 +250,7 @@ public function edit(Expense $expense)
 
             'created_by' =>
                 auth()->id(),
-
         ]);
-
 
         return redirect()
             ->route('expenses.index')
@@ -261,113 +261,120 @@ public function edit(Expense $expense)
     }
 
     /**
- * Update expense.
- */
-public function update(Request $request, Expense $expense)
-{
-    $validated = $request->validate([
-
-        'title' => [
-            'required',
-            'string',
-            'max:255',
-        ],
-
-        'amount' => [
-            'required',
-            'numeric',
-            'min:0',
-        ],
-
-        'expense_date' => [
-            'required',
-            'date',
-        ],
-
-        'category' => [
-            'required',
-            'string',
-            'max:100',
-        ],
-
-        'description' => [
-            'nullable',
-            'string',
-        ],
-
-        'payment_mode' => [
-            'required',
-            'in:Cash,UPI,Card,Bank Transfer',
-        ],
-
-    ]);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Update Expense
-    |--------------------------------------------------------------------------
-    */
-
-    $expense->update([
-
-        'title' =>
-            $validated['title'],
-
-        'amount' =>
-            $validated['amount'],
-
-        'expense_date' =>
-            $validated['expense_date'],
-
-        'category' =>
-            $validated['category'],
-
-        'description' =>
-            $validated['description'] ?? null,
-
-        'payment_mode' =>
-            $validated['payment_mode'],
-
-        'updated_by' =>
-            auth()->id(),
-
-    ]);
-
-
-    return redirect()
-        ->route('expenses.index')
-        ->with(
-            'success',
-            'Expense updated successfully.'
+     * Update expense.
+     */
+    public function update(Request $request, Expense $expense)
+    {
+        abort_unless(
+            $expense->library_id === auth()->user()->library_id,
+            404
         );
-}
 
+        $validated = $request->validate([
 
-        /**
- * Delete expense.
- */
-public function destroy(Expense $expense)
-{
-    $expense->update([
-        'updated_by' => auth()->id(),
-    ]);
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-    $expense->delete();
+            'amount' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
 
-    return redirect()
-        ->route('expenses.index')
-        ->with(
-            'success',
-            'Expense deleted successfully.'
+            'expense_date' => [
+                'required',
+                'date',
+            ],
+
+            'category' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'description' => [
+                'nullable',
+                'string',
+            ],
+
+            'payment_mode' => [
+                'required',
+                'in:Cash,UPI,Card,Bank Transfer',
+            ],
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update Expense
+        |--------------------------------------------------------------------------
+        */
+
+        $expense->update([
+
+            'title' =>
+                $validated['title'],
+
+            'amount' =>
+                $validated['amount'],
+
+            'expense_date' =>
+                $validated['expense_date'],
+
+            'category' =>
+                $validated['category'],
+
+            'description' =>
+                $validated['description'] ?? null,
+
+            'payment_mode' =>
+                $validated['payment_mode'],
+
+            'updated_by' =>
+                auth()->id(),
+        ]);
+
+        return redirect()
+            ->route('expenses.index')
+            ->with(
+                'success',
+                'Expense updated successfully.'
+            );
+    }
+
+    /**
+     * Delete expense.
+     */
+    public function destroy(Expense $expense)
+    {
+        abort_unless(
+            $expense->library_id === auth()->user()->library_id,
+            404
         );
-}
+
+        $expense->update([
+            'updated_by' => auth()->id(),
+        ]);
+
+        $expense->delete();
+
+        return redirect()
+            ->route('expenses.index')
+            ->with(
+                'success',
+                'Expense deleted successfully.'
+            );
+    }
 
     /**
      * Generate unique expense number.
      */
     private function generateExpenseNumber(): string
     {
+        $libraryId = auth()->user()->library_id;
+
         do {
 
             $expenseNo =
@@ -379,12 +386,10 @@ public function destroy(Expense $expense)
                 );
 
         } while (
-            Expense::where(
-                'expense_no',
-                $expenseNo
-            )->exists()
+            Expense::where('library_id', $libraryId)
+                ->where('expense_no', $expenseNo)
+                ->exists()
         );
-
 
         return $expenseNo;
     }

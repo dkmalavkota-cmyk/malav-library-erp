@@ -9,20 +9,26 @@ class AttendanceLog extends Model
 {
     use HasFactory;
 
-   protected $fillable = [
-    'student_id',
-    'seat_id',
-    'shift',
-    'attendance_date',
-    'check_in',
-    'check_out',
-    'status',
-    'remarks',
-];
+    protected $fillable = [
+        'library_id',
+        'student_id',
+        'seat_id',
+        'shift',
+        'attendance_date',
+        'check_in',
+        'check_out',
+        'status',
+        'remarks',
+    ];
 
     protected $casts = [
         'attendance_date' => 'date',
     ];
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     public function student()
     {

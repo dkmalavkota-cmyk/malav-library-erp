@@ -12,6 +12,8 @@ class Expense extends Model
 
     protected $fillable = [
 
+        'library_id',
+
         'expense_no',
 
         'title',
@@ -47,6 +49,12 @@ class Expense extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
+
 
     public function creator()
     {

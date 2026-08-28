@@ -18,6 +18,15 @@ class ReportController extends Controller
     {
         /*
         |--------------------------------------------------------------------------
+        | Current Library
+        |--------------------------------------------------------------------------
+        */
+
+        $libraryId = auth()->user()->library_id;
+
+
+        /*
+        |--------------------------------------------------------------------------
         | Date Range
         |--------------------------------------------------------------------------
         */
@@ -39,10 +48,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $totalCollection = Payment::whereBetween(
-            'payment_date',
-            [$fromDate, $toDate]
-        )->sum('amount');
+        $totalCollection = Payment::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'payment_date',
+                [$fromDate, $toDate]
+            )
+            ->sum('amount');
 
 
         /*
@@ -51,10 +65,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $totalExpense = Expense::whereBetween(
-            'expense_date',
-            [$fromDate, $toDate]
-        )->sum('amount');
+        $totalExpense = Expense::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'expense_date',
+                [$fromDate, $toDate]
+            )
+            ->sum('amount');
 
 
         /*
@@ -73,10 +92,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $paymentCount = Payment::whereBetween(
-            'payment_date',
-            [$fromDate, $toDate]
-        )->count();
+        $paymentCount = Payment::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'payment_date',
+                [$fromDate, $toDate]
+            )
+            ->count();
 
 
         /*
@@ -85,10 +109,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $expenseCount = Expense::whereBetween(
-            'expense_date',
-            [$fromDate, $toDate]
-        )->count();
+        $expenseCount = Expense::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'expense_date',
+                [$fromDate, $toDate]
+            )
+            ->count();
 
 
         /*
@@ -97,10 +126,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $newStudents = Student::whereBetween(
-            'joining_date',
-            [$fromDate, $toDate]
-        )->count();
+        $newStudents = Student::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'joining_date',
+                [$fromDate, $toDate]
+            )
+            ->count();
 
 
         /*
@@ -109,10 +143,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $newMemberships = Membership::whereBetween(
-            'start_date',
-            [$fromDate, $toDate]
-        )->count();
+        $newMemberships = Membership::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'start_date',
+                [$fromDate, $toDate]
+            )
+            ->count();
 
 
         /*
@@ -121,10 +160,15 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $attendanceCount = AttendanceLog::whereBetween(
-            'attendance_date',
-            [$fromDate, $toDate]
-        )->count();
+        $attendanceCount = AttendanceLog::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
+                'attendance_date',
+                [$fromDate, $toDate]
+            )
+            ->count();
 
 
         /*
@@ -135,6 +179,10 @@ class ReportController extends Controller
 
         $paymentModes = Payment::selectRaw(
                 'payment_mode, SUM(amount) as total'
+            )
+            ->where(
+                'library_id',
+                $libraryId
             )
             ->whereBetween(
                 'payment_date',
@@ -153,6 +201,10 @@ class ReportController extends Controller
 
         $expenseCategories = Expense::selectRaw(
                 'category, SUM(amount) as total'
+            )
+            ->where(
+                'library_id',
+                $libraryId
             )
             ->whereBetween(
                 'expense_date',
@@ -173,6 +225,10 @@ class ReportController extends Controller
                 'student',
                 'membership.plan',
             ])
+            ->where(
+                'library_id',
+                $libraryId
+            )
             ->whereBetween(
                 'payment_date',
                 [$fromDate, $toDate]
@@ -189,7 +245,11 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $recentExpenses = Expense::whereBetween(
+        $recentExpenses = Expense::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereBetween(
                 'expense_date',
                 [$fromDate, $toDate]
             )

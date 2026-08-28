@@ -16,47 +16,109 @@ class DashboardController extends Controller
     {
         /*
         |--------------------------------------------------------------------------
-        | Basic Statistics
+        | Current Library
         |--------------------------------------------------------------------------
         */
 
-        $totalStudents = Student::count();
-
-        $activeMemberships = Membership::where(
-            'status',
-            'Active'
-        )->count();
-
-        $todayAttendance = AttendanceLog::whereDate(
-            'created_at',
-            today()
-        )->count();
-
-        $todayCollection = Payment::whereDate(
-            'created_at',
-            today()
-        )->sum('amount');
+        $libraryId = auth()->user()->library_id;
 
 
         /*
         |--------------------------------------------------------------------------
-        | Seat Statistics
+        | Basic Statistics
         |--------------------------------------------------------------------------
         */
 
-        $totalSeats = Seat::count();
+        $totalStudents = Student::where(
+            'library_id',
+            $libraryId
+        )->count();
 
-        $occupiedSeats = SeatAssignment::where(
+
+        $activeMemberships = Membership::where(
+                'library_id',
+                $libraryId
+            )
+            ->where(
                 'status',
                 'Active'
             )
-            ->whereNull('released_date')
             ->count();
 
-        $availableSeats = max(
-            0,
-            $totalSeats - $occupiedSeats
-        );
+
+        $todayAttendance = AttendanceLog::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereDate(
+                'attendance_date',
+                today()
+            )
+            ->count();
+
+
+        $todayCollection = Payment::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereDate(
+                'payment_date',
+                today()
+            )
+            ->sum('amount');
+
+
+/*
+|--------------------------------------------------------------------------
+| Seat Statistics
+|--------------------------------------------------------------------------
+*/
+
+$totalSeats = Seat::where(
+    'library_id',
+    $libraryId
+)->count();
+
+
+/*
+|--------------------------------------------------------------------------
+| Assigned Seat Statistics
+|--------------------------------------------------------------------------
+|
+| Any seat having at least one active assignment is counted
+| as occupied/assigned on the dashboard.
+|
+| Morning only      = 1
+| Evening only      = 1
+| Full Day          = 1
+| Morning + Evening = 1
+|
+*/
+
+$activeAssignments = SeatAssignment::where(
+        'library_id',
+        $libraryId
+    )
+    ->where(
+        'status',
+        'Active'
+    )
+    ->whereNull('released_date')
+    ->get();
+
+
+$occupiedSeatIds = $activeAssignments
+    ->pluck('seat_id')
+    ->unique();
+
+
+$occupiedSeats = $occupiedSeatIds->count();
+
+
+$availableSeats = max(
+    0,
+    $totalSeats - $occupiedSeats
+);
 
 
         /*
@@ -65,10 +127,15 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $todayExpense = Expense::whereDate(
-            'expense_date',
-            today()
-        )->sum('amount');
+        $todayExpense = Expense::where(
+                'library_id',
+                $libraryId
+            )
+            ->whereDate(
+                'expense_date',
+                today()
+            )
+            ->sum('amount');
 
 
         /*
@@ -78,6 +145,10 @@ class DashboardController extends Controller
         */
 
         $expiringMemberships = Membership::where(
+                'library_id',
+                $libraryId
+            )
+            ->where(
                 'status',
                 'Active'
             )
@@ -97,16 +168,19 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        return view('dashboard', compact(
-            'totalStudents',
-            'activeMemberships',
-            'todayAttendance',
-            'todayCollection',
-            'totalSeats',
-            'occupiedSeats',
-            'availableSeats',
-            'todayExpense',
-            'expiringMemberships'
-        ));
+        return view(
+    'dashboard',
+    compact(
+        'totalStudents',
+        'activeMemberships',
+        'todayAttendance',
+        'todayCollection',
+        'totalSeats',
+        'occupiedSeats',
+        'availableSeats',
+        'todayExpense',
+        'expiringMemberships'
+    )
+);
     }
 }

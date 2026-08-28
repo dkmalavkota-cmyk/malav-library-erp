@@ -10,18 +10,19 @@ class MembershipPlan extends Model
 {
     use HasFactory, SoftDeletes;
 
-   protected $fillable = [
-    'name',
-    'code',
-    'duration_months',
-    'shift',
-    'price',
-    'badge_color',
-    'description',
-    'is_active',
-    'created_by',
-    'updated_by',
-];
+    protected $fillable = [
+        'library_id',
+        'name',
+        'code',
+        'duration_months',
+        'shift',
+        'price',
+        'badge_color',
+        'description',
+        'is_active',
+        'created_by',
+        'updated_by',
+    ];
 
     protected $casts = [
         'price' => 'decimal:2',
@@ -34,19 +35,23 @@ class MembershipPlan extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
+
     public function memberships()
     {
         return $this->hasMany(Membership::class);
     }
 
-
     public function services()
-{
-    return $this->belongsToMany(
-        Service::class,
-        'membership_plan_services'
-    );
-}
+    {
+        return $this->belongsToMany(
+            Service::class,
+            'membership_plan_services'
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------

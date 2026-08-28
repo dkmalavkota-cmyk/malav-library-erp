@@ -11,6 +11,7 @@ class Room extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'name',
         'code',
         'floor',
@@ -20,6 +21,11 @@ class Room extends Model
         'created_by',
         'updated_by',
     ];
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     public function seats()
     {

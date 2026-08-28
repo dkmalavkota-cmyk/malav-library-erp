@@ -28,11 +28,15 @@ class StoreRoomRequest extends FormRequest
             ],
 
             'code' => [
-                'required',
-                'string',
-                'max:20',
-                'unique:rooms,code',
-            ],
+    'required',
+    'string',
+    'max:20',
+    \Illuminate\Validation\Rule::unique('rooms', 'code')
+        ->where(fn ($query) => $query->where(
+            'library_id',
+            auth()->user()->library_id
+        )),
+],
 
             'floor' => [
                 'nullable',

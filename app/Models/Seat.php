@@ -11,6 +11,7 @@ class Seat extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'room_id',
         'table_no',
         'seat_number',
@@ -25,6 +26,14 @@ class Seat extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Seat belongs to a Library.
+     */
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     /**
      * Seat belongs to a Room.
@@ -46,16 +55,16 @@ class Seat extends Model
      * All Active Assignments.
      * (Morning + Evening + Full Day)
      */
-   public function activeAssignments()
-{
-    return $this->hasMany(SeatAssignment::class)
-        ->with([
-            'student',
-            'membership.plan',
-        ])
-        ->where('status', 'Active')
-        ->whereNull('released_date');
-}
+    public function activeAssignments()
+    {
+        return $this->hasMany(SeatAssignment::class)
+            ->with([
+                'student',
+                'membership.plan',
+            ])
+            ->where('status', 'Active')
+            ->whereNull('released_date');
+    }
 
     /**
      * Latest Active Assignment.

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Service extends Model
 {
     protected $fillable = [
+        'library_id',
         'name',
         'code',
         'description',
@@ -19,6 +20,14 @@ class Service extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Service belongs to a Library.
+     */
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     /**
      * Plans that include this service.

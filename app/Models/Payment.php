@@ -11,6 +11,7 @@ class Payment extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'library_id',
         'student_id',
         'membership_id',
         'receipt_no',
@@ -26,6 +27,11 @@ class Payment extends Model
     protected $casts = [
         'payment_date' => 'date',
     ];
+
+    public function library()
+    {
+        return $this->belongsTo(Library::class);
+    }
 
     public function student()
     {

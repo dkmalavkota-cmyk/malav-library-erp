@@ -34,8 +34,12 @@ class UpdateRoomRequest extends FormRequest
                 'string',
                 'max:20',
 
-                Rule::unique('rooms', 'code')
-                    ->ignore($this->route('room')),
+              Rule::unique('rooms', 'code')
+    ->where(fn ($query) => $query->where(
+        'library_id',
+        auth()->user()->library_id
+    ))
+    ->ignore($this->route('room')),
             ],
 
             'floor' => [

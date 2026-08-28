@@ -27,11 +27,29 @@ class StoreStudentRequest extends FormRequest
 
             'father_name' => 'nullable|string|max:150',
 
-            'mobile' => 'required|string|max:20|unique:students,mobile',
+          'mobile' => [
+    'required',
+    'string',
+    'max:20',
+    \Illuminate\Validation\Rule::unique('students', 'mobile')
+        ->where(fn ($query) => $query->where(
+            'library_id',
+            auth()->user()->library_id
+        )),
+],
 
             'whatsapp' => 'nullable|string|max:20',
 
-            'email' => 'nullable|email|max:150|unique:students,email',
+           'email' => [
+    'nullable',
+    'email',
+    'max:150',
+    \Illuminate\Validation\Rule::unique('students', 'email')
+        ->where(fn ($query) => $query->where(
+            'library_id',
+            auth()->user()->library_id
+        )),
+],
 
             'gender' => 'required|in:Male,Female,Other',
 
