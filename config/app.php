@@ -14,6 +14,7 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
+    'platform_admin_email' => env('PLATFORM_ADMIN_EMAIL'),
 
     /*
     |--------------------------------------------------------------------------
@@ -65,8 +66,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
-
+'timezone' => 'Asia/Kolkata',
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

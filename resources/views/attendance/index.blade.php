@@ -56,101 +56,101 @@
         @endif
 
 
-        {{-- Statistics --}}
-       <div
-    class="mb-8 flex flex-wrap gap-5"
-    style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));"
->
+      {{-- =========================================================
+     ATTENDANCE STATISTICS
+========================================================== --}}
+<div class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-5">
 
-            {{-- Today's Attendance --}}
-            <div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+    {{-- Today's Attendance --}}
+    <div class="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 sm:p-5 lg:p-6">
 
-                <div class="text-sm text-zinc-400">
-                    Today's Attendance
-                </div>
+        <div class="text-xs leading-5 text-zinc-400 sm:text-sm">
+            Today's Attendance
+        </div>
 
-                <div class="mt-4 text-4xl font-bold text-cyan-400">
-                    {{ $presentToday }}
-                </div>
+        <div class="mt-3 text-3xl font-bold text-cyan-400 sm:mt-4 sm:text-4xl">
+            {{ $presentToday }}
+        </div>
 
-                <div class="mt-2 text-sm text-zinc-500">
-                    Total check-ins today
-                </div>
+        <div class="mt-1.5 text-xs leading-5 text-zinc-500 sm:mt-2 sm:text-sm">
+            Total check-ins today
+        </div>
 
-            </div>
-
-
-            {{-- Currently Inside --}}
-            <div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
-
-                <div class="text-sm text-zinc-400">
-                    Currently Inside
-                </div>
-
-                <div class="mt-4 text-4xl font-bold text-emerald-400">
-                    {{ $checkedIn }}
-                </div>
-
-                <div class="mt-2 text-sm text-zinc-500">
-                    Students currently in library
-                </div>
-
-            </div>
-
-
-            {{-- Checked Out --}}
-            <div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
-
-                <div class="text-sm text-zinc-400">
-                    Checked Out
-                </div>
-
-                <div class="mt-4 text-4xl font-bold text-orange-400">
-                    {{ $checkedOut }}
-                </div>
-
-                <div class="mt-2 text-sm text-zinc-500">
-                    Completed visits today
-                </div>
-
-            </div>
-
-
-            {{-- Total Records --}}
-            <div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
-
-                <div class="text-sm text-zinc-400">
-                    Attendance Records
-                </div>
-
-                <div class="mt-4 text-4xl font-bold text-yellow-400">
-                    {{ $todayAttendance->count() }}
-                </div>
-
-                <div class="mt-2 text-sm text-zinc-500">
-                    Today's attendance entries
-                </div>
-
-            </div>
-
-            {{-- Total Active Students --}}
-<div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
-
-    <div class="text-sm text-zinc-400">
-        Active Students
     </div>
 
-    <div class="mt-4 text-4xl font-bold text-sky-400">
-        {{ $totalActiveStudents }}
+
+    {{-- Currently Inside --}}
+    <div class="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 sm:p-5 lg:p-6">
+
+        <div class="text-xs leading-5 text-zinc-400 sm:text-sm">
+            Currently Inside
+        </div>
+
+        <div class="mt-3 text-3xl font-bold text-emerald-400 sm:mt-4 sm:text-4xl">
+            {{ $checkedIn }}
+        </div>
+
+        <div class="mt-1.5 text-xs leading-5 text-zinc-500 sm:mt-2 sm:text-sm">
+            Students currently in library
+        </div>
+
     </div>
 
-    <div class="mt-2 text-sm text-zinc-500">
-        Currently active members
+
+    {{-- Checked Out --}}
+    <div class="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 sm:p-5 lg:p-6">
+
+        <div class="text-xs leading-5 text-zinc-400 sm:text-sm">
+            Checked Out
+        </div>
+
+        <div class="mt-3 text-3xl font-bold text-orange-400 sm:mt-4 sm:text-4xl">
+            {{ $checkedOut }}
+        </div>
+
+        <div class="mt-1.5 text-xs leading-5 text-zinc-500 sm:mt-2 sm:text-sm">
+            Completed visits today
+        </div>
+
+    </div>
+
+
+    {{-- Attendance Records --}}
+    <div class="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 sm:p-5 lg:p-6">
+
+        <div class="text-xs leading-5 text-zinc-400 sm:text-sm">
+            Attendance Records
+        </div>
+
+        <div class="mt-3 text-3xl font-bold text-yellow-400 sm:mt-4 sm:text-4xl">
+            {{ $todayAttendance->count() }}
+        </div>
+
+        <div class="mt-1.5 text-xs leading-5 text-zinc-500 sm:mt-2 sm:text-sm">
+            Today's attendance entries
+        </div>
+
+    </div>
+
+
+    {{-- Total Active Students --}}
+    <div class="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 sm:p-5 lg:p-6">
+
+        <div class="text-xs leading-5 text-zinc-400 sm:text-sm">
+            Active Students
+        </div>
+
+        <div class="mt-3 text-3xl font-bold text-sky-400 sm:mt-4 sm:text-4xl">
+            {{ $totalActiveStudents }}
+        </div>
+
+        <div class="mt-1.5 text-xs leading-5 text-zinc-500 sm:mt-2 sm:text-sm">
+            Currently active members
+        </div>
+
     </div>
 
 </div>
-
-        </div>
 
 
         {{-- Quick Check-In Placeholder --}}

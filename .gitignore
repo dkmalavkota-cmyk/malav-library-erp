@@ -23,3 +23,18 @@ yarn-error.log
 /.vscode
 /.zed
 /backups 
+/storage/db-backup
+/storage/saas-backup
+/storage/ui-backup
+
+# Local testing and backup files
+/Hindi_SI_Sandhi_30_Questions_Import.xlsx
+/StudentController.php.bak
+/browser-flux.js
+/fix_encoding.php
+/flux-min-test.js
+/flux-served.js
+/flux-test.js
+/*.sql
+/storage/exam-layout-backup
+/storage/patch_attempt_ui.php

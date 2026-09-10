@@ -61,6 +61,29 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+/* =========================================
+   PREMIUM SELECT DROPDOWN VISIBILITY
+========================================= */
+
+select {
+    color-scheme: dark;
+}
+
+select option {
+    background-color: #111827;
+    color: #f3f4f6;
+}
+
+select option:checked {
+    background-color: #1f2937;
+    color: #ffffff;
+}
+
+select option:hover {
+    background-color: #374151;
+    color: #ffffff;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

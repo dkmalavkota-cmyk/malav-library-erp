@@ -39,4 +39,14 @@ class Library extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function saasPayments(): HasMany
+    {
+        return $this->hasMany(SaasPayment::class);
+    }
 }

@@ -215,11 +215,12 @@
 
 
         {{-- Desktop User Menu --}}
-
-        <x-desktop-user-menu
-            class="hidden lg:block"
-            :name="auth()->user()->name"
-        />
+<div class="hidden lg:block w-full px-2 pb-2">
+    <x-desktop-user-menu
+        class="w-full"
+        :name="auth()->user()->name"
+    />
+</div>
 
     </flux:sidebar>
 

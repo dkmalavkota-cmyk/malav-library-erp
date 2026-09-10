@@ -678,6 +678,18 @@
                 target="_blank"
             >
 
+            {{-- EXAM PORTAL --}}
+<a href="{{ route('students.exam-account.create', $student) }}">
+
+    <flux:button
+        variant="ghost"
+        class="w-full"
+    >
+        Exam Portal
+    </flux:button>
+
+</a>
+
                 <flux:button
                     variant="ghost"
                     class="w-full"

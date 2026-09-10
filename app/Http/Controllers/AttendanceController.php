@@ -674,34 +674,52 @@ class AttendanceController extends Controller
         | Find Student
         |--------------------------------------------------------------------------
         */
+$qrParts = explode('|', $validated['code'], 2);
 
-        $student = Student::where(
+$libraryCode = trim($qrParts[0] ?? '');
+$studentCode = trim($qrParts[1] ?? $validated['code']);
+
+$currentLibraryCode = trim(
+    (string) auth()->user()->library->code
+);
+
+if (
+    count($qrParts) === 2 &&
+    strcasecmp($libraryCode, $currentLibraryCode) !== 0
+) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Invalid QR code for this library.',
+    ], 404);
+}
+
+$student = Student::where(
+        'library_id',
+        $libraryId
+    )
+    ->with([
+        'seatAssignments' => function ($query) use ($libraryId) {
+
+            $query->where(
                 'library_id',
                 $libraryId
             )
             ->with([
-                'seatAssignments' => function ($query) use ($libraryId) {
-
-                    $query->where(
-                        'library_id',
-                        $libraryId
-                    )
-                    ->with([
-                        'seat.room',
-                        'membership.plan',
-                    ])
-                    ->where('status', 'Active')
-                    ->whereNull('released_date')
-                    ->latest('assigned_date');
-
-                },
+                'seat.room',
+                'membership.plan',
             ])
-            ->where(
-                'student_code',
-                $validated['code']
-            )
             ->where('status', 'Active')
-            ->first();
+            ->whereNull('released_date')
+            ->latest('assigned_date');
+
+        },
+    ])
+    ->where(
+        'student_code',
+        $studentCode
+    )
+    ->where('status', 'Active')
+    ->first();
 
 
         /*

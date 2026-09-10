@@ -9,6 +9,9 @@ use App\Models\Payment;
 use App\Models\Expense;
 use App\Models\Seat;
 use App\Models\SeatAssignment;
+use App\Models\Exam;
+use App\Models\ExamCategory;
+use App\Models\ExamQuestion;
 
 class DashboardController extends Controller
 {
@@ -68,57 +71,42 @@ class DashboardController extends Controller
             ->sum('amount');
 
 
-/*
-|--------------------------------------------------------------------------
-| Seat Statistics
-|--------------------------------------------------------------------------
-*/
+        /*
+        |--------------------------------------------------------------------------
+        | Seat Statistics
+        |--------------------------------------------------------------------------
+        */
 
-$totalSeats = Seat::where(
-    'library_id',
-    $libraryId
-)->count();
-
-
-/*
-|--------------------------------------------------------------------------
-| Assigned Seat Statistics
-|--------------------------------------------------------------------------
-|
-| Any seat having at least one active assignment is counted
-| as occupied/assigned on the dashboard.
-|
-| Morning only      = 1
-| Evening only      = 1
-| Full Day          = 1
-| Morning + Evening = 1
-|
-*/
-
-$activeAssignments = SeatAssignment::where(
-        'library_id',
-        $libraryId
-    )
-    ->where(
-        'status',
-        'Active'
-    )
-    ->whereNull('released_date')
-    ->get();
+        $totalSeats = Seat::where(
+            'library_id',
+            $libraryId
+        )->count();
 
 
-$occupiedSeatIds = $activeAssignments
-    ->pluck('seat_id')
-    ->unique();
+        $activeAssignments = SeatAssignment::where(
+                'library_id',
+                $libraryId
+            )
+            ->where(
+                'status',
+                'Active'
+            )
+            ->whereNull('released_date')
+            ->get();
 
 
-$occupiedSeats = $occupiedSeatIds->count();
+        $occupiedSeatIds = $activeAssignments
+            ->pluck('seat_id')
+            ->unique();
 
 
-$availableSeats = max(
-    0,
-    $totalSeats - $occupiedSeats
-);
+        $occupiedSeats = $occupiedSeatIds->count();
+
+
+        $availableSeats = max(
+            0,
+            $totalSeats - $occupiedSeats
+        );
 
 
         /*
@@ -164,23 +152,83 @@ $availableSeats = max(
 
         /*
         |--------------------------------------------------------------------------
-        | Send Data To Dashboard
+        | ONLINE EXAM STATISTICS
+        |--------------------------------------------------------------------------
+        */
+
+        $totalExamCategories = ExamCategory::where(
+            'library_id',
+            $libraryId
+        )->count();
+
+
+        $activeExamCategories = ExamCategory::where(
+            'library_id',
+            $libraryId
+        )
+            ->where('is_active', true)
+            ->count();
+
+
+        $totalExams = Exam::where(
+            'library_id',
+            $libraryId
+        )->count();
+
+
+        $publishedExams = Exam::where(
+            'library_id',
+            $libraryId
+        )
+            ->where('is_published', true)
+            ->where('is_active', true)
+            ->count();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Question Bank
+        |--------------------------------------------------------------------------
+        |
+        | Current implementation stores questions through exam_questions.
+        | This count is intentionally library-scoped through the parent exam.
+        |
+        | Once the reusable Question Bank architecture is introduced,
+        | this variable will point to the standalone question-bank table.
+        |
+        */
+
+      $questionBankCount = ExamQuestion::where(
+    'library_id',
+    $libraryId
+)->count();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Online Exam Management
         |--------------------------------------------------------------------------
         */
 
         return view(
-    'dashboard',
-    compact(
-        'totalStudents',
-        'activeMemberships',
-        'todayAttendance',
-        'todayCollection',
-        'totalSeats',
-        'occupiedSeats',
-        'availableSeats',
-        'todayExpense',
-        'expiringMemberships'
-    )
-);
+            'dashboard',
+            compact(
+                'totalStudents',
+                'activeMemberships',
+                'todayAttendance',
+                'todayCollection',
+                'totalSeats',
+                'occupiedSeats',
+                'availableSeats',
+                'todayExpense',
+                'expiringMemberships',
+
+                'totalExamCategories',
+                'activeExamCategories',
+                'totalExams',
+                'publishedExams',
+                'questionBankCount'
+            )
+        );
     }
 }

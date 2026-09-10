@@ -531,25 +531,26 @@ function playAttendanceSound(type)
     | Find Student
     |--------------------------------------------------------------------------
     */
+function findStudent(qrValue)
+{
+    const rawValue = String(qrValue).trim();
 
-    function findStudent(qrValue)
-    {
+    const parts = rawValue.split('|');
 
-        const value =
-            String(qrValue)
-                .trim()
-                .toLowerCase();
+    const studentCode = (
+        parts.length === 2
+            ? parts[1]
+            : parts[0]
+    ).trim().toLowerCase();
 
+    return students.find(function (student) {
 
-        return students.find(function (student) {
+        return String(student.code)
+            .trim()
+            .toLowerCase() === studentCode;
 
-            return String(student.code)
-                .trim()
-                .toLowerCase() === value;
-
-        });
-
-    }
+    });
+}
 
 
 

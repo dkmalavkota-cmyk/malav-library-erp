@@ -25,11 +25,12 @@ class SeatSeeder extends Seeder
 
             for ($i = 1; $i <= 60; $i++) {
 
-                Seat::create([
-                    'room_id'     => $mainHall->id,
-                    'seat_number' => 'MH-' . str_pad($i, 3, '0', STR_PAD_LEFT),
-                    'status'      => 'available',
-                ]);
+               Seat::create([
+    'room_id'     => $mainHall->id,
+    'table_no'    => $i,
+    'seat_number' => 'MH-' . str_pad($i, 3, '0', STR_PAD_LEFT),
+    'status'      => 'available',
+]);
             }
         }
 
@@ -43,11 +44,12 @@ class SeatSeeder extends Seeder
 
             for ($i = 1; $i <= 15; $i++) {
 
-                Seat::create([
-                    'room_id'     => $womenRoom->id,
-                    'seat_number' => 'WSR-' . str_pad($i, 3, '0', STR_PAD_LEFT),
-                    'status'      => 'available',
-                ]);
+               Seat::create([
+    'room_id'     => $womenRoom->id,
+    'table_no'    => $i,
+    'seat_number' => 'WSR-' . str_pad($i, 3, '0', STR_PAD_LEFT),
+    'status'      => 'available',
+]);
             }
         }
     }

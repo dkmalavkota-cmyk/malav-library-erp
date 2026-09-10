@@ -1,4 +1,4 @@
-<x-layouts::app :title="'Renew Membership'">
+<x-layouts::app>
 
     <div class="max-w-5xl mx-auto space-y-6">
 
@@ -36,11 +36,7 @@
                 <ul class="mt-2 list-disc pl-5 text-sm text-red-300">
 
                     @foreach($errors->all() as $error)
-
-                        <li>
-                            {{ $error }}
-                        </li>
-
+                        <li>{{ $error }}</li>
                     @endforeach
 
                 </ul>
@@ -59,9 +55,7 @@
 
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 
-
                 {{-- Student --}}
-
                 <div>
 
                     <p class="text-xs uppercase tracking-wide text-zinc-500">
@@ -69,10 +63,8 @@
                     </p>
 
                     <p class="mt-1 font-semibold text-white">
-
                         {{ $membership->student?->first_name }}
                         {{ $membership->student?->last_name }}
-
                     </p>
 
                     <p class="mt-1 text-sm text-zinc-500">
@@ -83,7 +75,6 @@
 
 
                 {{-- Current Plan --}}
-
                 <div>
 
                     <p class="text-xs uppercase tracking-wide text-zinc-500">
@@ -98,7 +89,6 @@
 
 
                 {{-- Current Period --}}
-
                 <div>
 
                     <p class="text-xs uppercase tracking-wide text-zinc-500">
@@ -106,20 +96,15 @@
                     </p>
 
                     <p class="mt-1 font-semibold text-zinc-300">
-
                         {{ $membership->start_date?->format('d M Y') }}
-
                         →
-
                         {{ $membership->end_date?->format('d M Y') }}
-
                     </p>
 
                 </div>
 
 
                 {{-- Previous Amount --}}
-
                 <div>
 
                     <p class="text-xs uppercase tracking-wide text-zinc-500">
@@ -127,9 +112,7 @@
                     </p>
 
                     <p class="mt-1 font-semibold text-yellow-400">
-
                         ₹{{ number_format($membership->final_amount, 2) }}
-
                     </p>
 
                 </div>
@@ -140,7 +123,6 @@
 
 
         {{-- Renewal Form --}}
-
         <form
             action="{{ route('memberships.renew.store', $membership) }}"
             method="POST"
@@ -151,17 +133,21 @@
 
 
             {{-- Renewal Details --}}
+            <div>
+                <h2 class="text-lg font-semibold text-white">
+                    New Membership Period
+                </h2>
 
-            <h2 class="text-lg font-semibold text-white">
-                New Membership Period
-            </h2>
+                <p class="mt-1 text-sm text-zinc-500">
+                    Renewal continues from the previous membership period.
+                </p>
+            </div>
 
 
             <div class="mt-6 grid gap-6 md:grid-cols-2">
 
 
                 {{-- Plan --}}
-
                 <div>
 
                     <label class="mb-2 block text-sm font-medium text-zinc-300">
@@ -179,7 +165,6 @@
 
 
                 {{-- Duration --}}
-
                 <div>
 
                     <label class="mb-2 block text-sm font-medium text-zinc-300">
@@ -197,7 +182,6 @@
 
 
                 {{-- Start Date --}}
-
                 <div>
 
                     <label
@@ -211,16 +195,20 @@
                         type="date"
                         name="start_date"
                         id="start_date"
-                        value="{{ old('start_date', now()->format('Y-m-d')) }}"
+                        value="{{ old('start_date', $membership->end_date?->copy()->addDay()->format('Y-m-d')) }}"
+                        min="{{ $membership->end_date?->copy()->addDay()->format('Y-m-d') }}"
                         required
                         class="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white outline-none focus:border-indigo-500"
                     >
+
+                    <p class="mt-2 text-xs text-zinc-500">
+                        Renewal starts from the day after the previous membership ends.
+                    </p>
 
                 </div>
 
 
                 {{-- End Date --}}
-
                 <div>
 
                     <label
@@ -248,7 +236,6 @@
 
 
                 {{-- Amount --}}
-
                 <div>
 
                     <label
@@ -273,7 +260,6 @@
 
 
                 {{-- Discount --}}
-
                 <div>
 
                     <label
@@ -297,7 +283,6 @@
 
 
                 {{-- Final Payable --}}
-
                 <div class="md:col-span-2">
 
                     <div class="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
@@ -333,7 +318,6 @@
 
 
             {{-- Payment Details --}}
-
             <div class="mt-10 border-t border-zinc-800 pt-8">
 
                 <h2 class="text-lg font-semibold text-white">
@@ -349,7 +333,6 @@
 
 
                     {{-- Payment Mode --}}
-
                     <div>
 
                         <label
@@ -404,7 +387,6 @@
 
 
                     {{-- Payment Date --}}
-
                     <div>
 
                         <label
@@ -427,7 +409,6 @@
 
 
                     {{-- Transaction ID --}}
-
                     <div class="md:col-span-2">
 
                         <label
@@ -455,7 +436,6 @@
 
 
                     {{-- Remarks --}}
-
                     <div class="md:col-span-2">
 
                         <label
@@ -481,7 +461,6 @@
 
 
             {{-- Buttons --}}
-
             <div class="mt-8 flex items-center justify-end gap-3">
 
                 <a href="{{ route('memberships.index') }}">
@@ -494,7 +473,6 @@
                     </flux:button>
 
                 </a>
-
 
                 <flux:button
                     type="submit"
@@ -511,7 +489,6 @@
 
 
     {{-- JavaScript --}}
-
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -530,7 +507,6 @@
 
             const finalAmountDisplay =
                 document.getElementById('finalAmountDisplay');
-
 
             const duration =
                 {{ (int) ($membership->plan?->duration_months ?? 1) }};

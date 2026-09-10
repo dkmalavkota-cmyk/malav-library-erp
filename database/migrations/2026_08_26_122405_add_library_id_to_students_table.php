@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->unsignedInteger('library_id')
-                ->nullable()
-                ->change();
+           $table->unsignedInteger('library_id')
+    ->nullable()
+    ->after('id');
 
             $table->index('library_id');
 

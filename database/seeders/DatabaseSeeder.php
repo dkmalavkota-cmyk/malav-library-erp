@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RoomSeeder::class,
             SeatSeeder::class,
             MembershipPlanSeeder::class,
+            PlanSeeder::class,
             RoleSeeder::class,
             SuperAdminSeeder::class,
         ]);

@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Seat;
 use App\Models\SeatAssignment;
 use App\Models\Student;
+use App\Models\StudentExamAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -112,20 +113,66 @@ class StudentController extends Controller
     {
         $data = $request->validated();
 
-        $data['library_id'] = auth()->user()->library_id;
 
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request
-                ->file('photo')
-                ->store('students', 'public');
-        }
+$data['library_id'] = auth()->user()->library_id;
 
-        Student::create($data);
+/*
+ * Enforce the student limit from the active subscription plan.
+ * This is a backend check and cannot be bypassed through the UI.
+ */
+$isPlatformAdmin = config('app.platform_admin_email')
+    && strcasecmp(
+        (string) auth()->user()->email,
+        (string) config('app.platform_admin_email')
+    ) === 0;
 
+if (!$isPlatformAdmin) {
+    $subscription = auth()->user()->library
+        ->subscriptions()
+        ->with('plan')
+        ->whereIn('status', ['trial', 'active'])
+        ->whereDate('starts_at', '<=', now())
+        ->whereDate('ends_at', '>=', now())
+        ->latest('ends_at')
+        ->first();
+
+    if (!$subscription || !$subscription->plan) {
         return redirect()
             ->route('students.index')
-            ->with('success', 'Student added successfully.');
+            ->with('error', 'Your subscription is inactive or expired.');
     }
+
+    $currentStudentCount = Student::where(
+        'library_id',
+        $data['library_id']
+    )->count();
+
+    if (!$subscription->plan->allowsStudents($currentStudentCount)) {
+        return redirect()
+            ->route('students.index')
+            ->with(
+                'error',
+                'Your current plan has reached its student limit. Please upgrade your plan to add more students.'
+            );
+    }
+}
+
+if ($request->hasFile('photo')) {
+    $data['photo'] = $request
+        ->file('photo')
+        ->store('students', 'public');
+}
+
+Student::create($data);
+
+return redirect()
+    ->route('students.index')
+    ->with('success', 'Student added successfully.');
+}
+
+
+
+
 
     /**
      * View Student
@@ -138,6 +185,7 @@ class StudentController extends Controller
         );
 
         $student->load([
+            'examAccount',
             'memberships' => function ($query) {
                 $query->with([
                     'plan',

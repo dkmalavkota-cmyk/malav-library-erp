@@ -35,7 +35,7 @@
             class="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white"
         >
 
-            @foreach([1, 3, 6, 12] as $month)
+            @foreach([1, 2, 3, 6, 12] as $month)
 
                 <option
                     value="{{ $month }}"

@@ -45,7 +45,6 @@ class MembershipController extends Controller
             ])
             ->whereHas('student')
             ->whereHas('plan')
-
             ->when($search, function ($query) use ($search) {
 
                 $query->whereHas('student', function ($student) use ($search) {
@@ -62,13 +61,11 @@ class MembershipController extends Controller
                 });
 
             })
-
             ->when($status, function ($query) use ($status) {
 
                 $query->where('status', $status);
 
             })
-
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -157,20 +154,33 @@ class MembershipController extends Controller
 
         $validated = $request->validate([
             'student_id' => [
-    'required',
-    \Illuminate\Validation\Rule::exists('students', 'id')
-        ->where(fn ($query) => $query->where('library_id', $libraryId)),
-],
+                'required',
+                \Illuminate\Validation\Rule::exists('students', 'id')
+                    ->where(fn ($query) => $query->where('library_id', $libraryId)),
+            ],
 
-'membership_plan_id' => [
-    'required',
-    \Illuminate\Validation\Rule::exists('membership_plans', 'id')
-        ->where(fn ($query) => $query->where('library_id', $libraryId)),
-],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-           'final_amount' => ['nullable', 'numeric', 'min:0'],
-            
+            'membership_plan_id' => [
+                'required',
+                \Illuminate\Validation\Rule::exists('membership_plans', 'id')
+                    ->where(fn ($query) => $query->where('library_id', $libraryId)),
+            ],
+
+            'start_date' => [
+                'required',
+                'date',
+            ],
+
+            'end_date' => [
+                'required',
+                'date',
+                'after_or_equal:start_date',
+            ],
+
+            'final_amount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
         ]);
 
         /*
@@ -184,18 +194,19 @@ class MembershipController extends Controller
 
         $plan = MembershipPlan::where('library_id', $libraryId)
             ->findOrFail($validated['membership_plan_id']);
-            if (
-    Membership::where('library_id', $libraryId)
-        ->where('student_id', $student->id)
-        ->where('status', 'Active')
-        ->exists()
-) {
-    return back()
-        ->withErrors([
-            'student_id' => 'This student already has an active membership.',
-        ])
-        ->withInput();
-}
+
+        if (
+            Membership::where('library_id', $libraryId)
+                ->where('student_id', $student->id)
+                ->where('status', 'Active')
+                ->exists()
+        ) {
+            return back()
+                ->withErrors([
+                    'student_id' => 'This student already has an active membership.',
+                ])
+                ->withInput();
+        }
 
         Membership::create([
             'library_id' => $libraryId,
@@ -203,12 +214,10 @@ class MembershipController extends Controller
             'membership_plan_id' => $plan->id,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-
-           'amount' => $plan->price,
+            'amount' => $plan->price,
             'discount' => 0,
-           'final_amount' => $plan->price,
-
-           'status' => 'Active',
+            'final_amount' => $plan->price,
+            'status' => 'Active',
             'remarks' => null,
             'created_by' => auth()->id(),
         ]);
@@ -295,6 +304,20 @@ class MembershipController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | Renewal Continuation Date
+        |--------------------------------------------------------------------------
+        |
+        | Renewal starts from the day after the previous membership ended.
+        | Admin may choose a later date, but cannot create an earlier period.
+        |
+        */
+
+        $minimumStartDate = Carbon::parse(
+            $membership->end_date
+        )->addDay();
+
+        /*
+        |--------------------------------------------------------------------------
         | Validate Request
         |--------------------------------------------------------------------------
         */
@@ -304,13 +327,14 @@ class MembershipController extends Controller
             'start_date' => [
                 'required',
                 'date',
+                'after_or_equal:' . $minimumStartDate->format('Y-m-d'),
             ],
 
-           'amount' => [
-    'nullable',
-    'numeric',
-    'min:0',
-],
+            'amount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
 
             'discount' => [
                 'nullable',
@@ -339,6 +363,11 @@ class MembershipController extends Controller
                 'string',
             ],
 
+        ], [
+
+            'start_date.after_or_equal' =>
+                'Renewal start date cannot be before the previous membership end date.',
+
         ]);
 
         /*
@@ -347,7 +376,7 @@ class MembershipController extends Controller
         |--------------------------------------------------------------------------
         */
 
-       $amount = (float) $membership->plan->price;
+        $amount = (float) $membership->plan->price;
 
         $discount = (float) (
             $validated['discount'] ?? 0
@@ -489,11 +518,14 @@ class MembershipController extends Controller
 
                 $oldSeatAssignment->update([
 
-                    'status' => 'Released',
+                    'status' =>
+                        'Released',
 
-                    'released_date' => today(),
+                    'released_date' =>
+                        today(),
 
-                    'updated_by' => auth()->id(),
+                    'updated_by' =>
+                        auth()->id(),
 
                 ]);
 

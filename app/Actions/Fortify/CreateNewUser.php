@@ -5,6 +5,8 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\Library;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -16,8 +18,7 @@ class CreateNewUser implements CreatesNewUsers
 
     /**
      * Validate and create a newly registered user
-     *
-     * with their own library.
+     * with their own library and initial 5-day free trial subscription.
      *
      * @param  array<string, string>  $input
      */
@@ -36,6 +37,16 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         return DB::transaction(function () use ($input) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Find Free Trial Plan
+            |--------------------------------------------------------------------------
+            */
+
+            $trialPlan = Plan::where('name', 'Free Trial')
+                ->where('is_active', true)
+                ->firstOrFail();
 
             /*
             |--------------------------------------------------------------------------
@@ -85,16 +96,39 @@ class CreateNewUser implements CreatesNewUsers
 
             /*
             |--------------------------------------------------------------------------
-            | Create User
+            | Create Owner User
             |--------------------------------------------------------------------------
             */
 
-            return User::create([
+            $user = User::create([
                 'library_id' => $library->id,
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => $input['password'],
             ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Create Initial 5-Day Free Trial Subscription
+            |--------------------------------------------------------------------------
+            |
+            | Every new library gets the Free Trial plan.
+            | The existing plan_name field is retained for backward compatibility.
+            |
+            */
+
+            Subscription::create([
+                'library_id' => $library->id,
+                'plan_id' => $trialPlan->id,
+                'plan_name' => $trialPlan->name,
+                'starts_at' => now()->toDateString(),
+                'ends_at' => now()->addDays(5)->toDateString(),
+                'status' => 'trial',
+                'amount' => 0,
+                'notes' => 'Initial 5-day free trial created during library registration.',
+            ]);
+
+            return $user;
         });
     }
 }
